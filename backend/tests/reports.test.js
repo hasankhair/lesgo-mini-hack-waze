@@ -85,9 +85,9 @@ describe('POST /api/reports (submission)', () => {
 });
 
 describe('POST /api/reports/:id/votes (confirmation)', () => {
-  it('upserts a single vote per user and returns the updated report', async () => {
+  it('records a single vote per user and returns the updated report', async () => {
     const supabase = createFakeSupabase({
-      handle: (op) => (op.action === 'upsert' ? { data: null, error: null } : { data: { ...report, confirmation_count: 1 }, error: null }),
+      handle: (op) => (op.action === 'rpc' ? { data: null, error: null } : { data: { ...report, confirmation_count: 1 }, error: null }),
     });
     const res = await request(buildApp({ supabase }))
       .post(`/api/reports/${REPORT_ID}/votes`)
@@ -96,12 +96,10 @@ describe('POST /api/reports/:id/votes (confirmation)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.report).toMatchObject({ confirmation_count: 1, my_vote: 'confirm' });
-    const upsert = supabase.ops.find((op) => op.action === 'upsert');
-    expect(upsert).toMatchObject({
-      table: 'report_confirmations',
-      payload: { report_id: REPORT_ID, user_id: ALICE.id, confirmation_type: 'confirm' },
-      options: { onConflict: 'report_id,user_id' },
-    });
+    const vote = supabase.ops.find((op) => op.action === 'rpc');
+    // The database takes the voter from the JWT (auth.uid()), not the request.
+    expect(vote).toMatchObject({ table: 'vote_report', payload: { p_report_id: REPORT_ID, p_type: 'confirm' } });
+    expect(vote.client).toBe(`user:${ALICE.id}`);
   });
 
   it('accepts "not_present" votes', async () => {

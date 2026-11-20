@@ -58,9 +58,8 @@ export function createReportsController() {
     async vote(req, res) {
       const { id } = req.valid.params;
       const { type } = req.valid.body;
-      const { error } = await req.db
-        .from('report_confirmations')
-        .upsert({ report_id: id, user_id: req.user.id, confirmation_type: type }, { onConflict: 'report_id,user_id' });
+      // One vote per user; voting again changes it (see vote_report in the migrations).
+      const { error } = await req.db.rpc('vote_report', { p_report_id: id, p_type: type });
       throwIf(error, 'Could not record your vote.');
 
       const { data, error: readError } = await req.db.from('traffic_reports').select(REPORT_COLUMNS).eq('id', id).maybeSingle();

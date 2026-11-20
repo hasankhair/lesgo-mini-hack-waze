@@ -183,6 +183,34 @@ describe('report_confirmations', () => {
   const counts = async (id) =>
     (await db.query('select confirmation_count, not_present_count, status from public.traffic_reports where id = $1', [id])).rows[0];
 
+  const voteRpc = (userId, reportId, type) =>
+    asUser(userId, () => db.query('select public.vote_report($1, $2)', [reportId, type]));
+
+  it('records and changes votes through vote_report()', async () => {
+    const report = await insertReport(ALICE);
+    await voteRpc(BOB, report.id, 'confirm');
+    await voteRpc(BOB, report.id, 'confirm');
+    expect(await counts(report.id)).toMatchObject({ confirmation_count: 1, not_present_count: 0 });
+    await voteRpc(BOB, report.id, 'not_present');
+    expect(await counts(report.id)).toMatchObject({ confirmation_count: 0, not_present_count: 1 });
+    await expect(voteRpc(ALICE, report.id, 'confirm')).rejects.toThrow(/own report/);
+    await expect(asAnon(() => db.query('select public.vote_report($1, $2)', [report.id, 'confirm']))).rejects.toThrow(/permission denied/);
+  });
+
+  it('rejects the PostgREST-style upsert that rewrites report_id and user_id', async () => {
+    // This is what supabase-js .upsert() sends; it must not be allowed to move votes.
+    const report = await insertReport(ALICE);
+    await expect(
+      asUser(BOB, () =>
+        db.query(
+          `insert into public.report_confirmations (report_id, user_id, confirmation_type) values ($1, $2, 'confirm')
+           on conflict (report_id, user_id) do update set report_id = excluded.report_id, user_id = excluded.user_id, confirmation_type = excluded.confirmation_type`,
+          [report.id, BOB],
+        ),
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
   it('increments the confirmation count once per user', async () => {
     const report = await insertReport(ALICE);
     await vote(BOB, report.id, 'confirm');
