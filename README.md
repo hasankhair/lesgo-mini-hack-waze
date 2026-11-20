@@ -2,7 +2,7 @@
 
 Lesgo is a navigation app with community traffic reporting. It has an interactive OpenStreetMap map, GPS location, destination search, route planning with turn-by-turn guidance, and incident reports from drivers that update live through Supabase Realtime.
 
-Lesgo does **not** use live traffic data by default. Routes use typical road speeds, and incident markers are unverified community reports. The UI labels both.
+With a TomTom API key, Lesgo shows live traffic: coloured road speeds, official incidents, and routes and arrival times that include current traffic. Without one, routes use typical road speeds. Community reports from drivers are always labelled as unverified, and official incidents use a different marker.
 
 ## Contents
 
@@ -83,9 +83,9 @@ Other scripts:
 ## Supabase setup
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Apply the migration. Either:
+2. Apply the migrations in `supabase/migrations/`, in order. Either:
    - with the Supabase CLI: `supabase link --project-ref <ref>` then `supabase db push`, or
-   - paste `supabase/migrations/20250101000000_initial_schema.sql` into the SQL editor and run it.
+   - paste each file into the SQL editor and run it.
 3. Copy **Project URL** and the **anon public** key into `.env` (both the plain and the `VITE_` variables).
 4. In **Authentication → URL Configuration**, set the Site URL (e.g. `http://localhost:5173`) and add `http://localhost:5173/reset-password` to the redirect URLs, so password-reset links work.
 5. Optional: enable `pg_cron` and schedule `select public.expire_stale_reports()` every few minutes to mark expired rows. Queries already hide expired reports, so this only tidies up stored statuses.
@@ -98,7 +98,7 @@ The migration adds `traffic_reports` to the `supabase_realtime` publication. Tha
 | --- | --- | --- |
 | `profiles` | Username, email, avatar, `save_history` | Created by trigger on sign-up; each user can read/update only their own row |
 | `traffic_reports` | Community incidents | 9 categories (check constraint); server sets status, counts, `created_at`, `expires_at`; `user_id` is not readable by clients |
-| `report_confirmations` | "Still there" / "Not there" votes | `unique (report_id, user_id)`; no votes on your own or inactive reports |
+| `report_confirmations` | "Still there" / "Not there" votes | `unique (report_id, user_id)`; no votes on your own or inactive reports; written via `vote_report()` so changing a vote only touches `confirmation_type` |
 | `saved_locations` | Home, Work, favourites | Private; at most one Home and one Work per user (partial unique index) |
 | `navigation_history` | Started trips | Private; origin stored at ~110 m precision; skipped when `save_history` is off |
 
@@ -115,6 +115,7 @@ The migration adds `traffic_reports` to the `supabase_realtime` publication. Tha
 - **Incident ahead alerts**: while navigating, community reports within 40 m of the route and up to 2 km ahead show in a banner with a countdown, and are announced once at 1 km.
 - **Screen stays on** during navigation (Screen Wake Lock API, where supported), and is released when navigation ends.
 - **Installable**: a web app manifest and icons let users add Lesgo to their home screen and open it full-screen.
+- **Live traffic (TomTom)**: road colours for current speed (toggle in the header), square markers for official closures, roadworks, accidents and hazards with delay and extent, and traffic-aware routes showing "+N min due to traffic". During navigation, official incidents on the route are announced like community reports, but stated as fact instead of "reported". Incidents refresh every 2 minutes and are cached by the API for 1 minute to save quota.
 - **Community reports**: 9 categories, optional description, at your GPS position or the map centre. Other drivers can confirm a report or mark it gone. Each report shows its reporter's username, age, confirmations and expiry. New reports, count changes and removals appear for everyone instantly via Realtime.
 - **Accounts**: registration (with email confirmation if enabled in Supabase), login, logout, password reset, change password. You can browse the map signed out. Reporting and voting require an account.
 - **Dashboard** (`/dashboard`): profile and username, saved places (add via search, set Home/Work, navigate, delete), recent destinations (navigate, delete, clear), your report history with statuses, and settings (theme, history on/off, password).
@@ -131,7 +132,8 @@ The defaults are free public services meant for **development and light use**. E
 | Geocoding | Photon (`photon.komoot.io`) | Fair use, no SLA, may be rate limited | Self-hosted Photon (`PHOTON_URL`), or your own Nominatim |
 | Geocoding (alt.) | Nominatim | [Policy](https://operations.osmfoundation.org/policies/nominatim/): max 1 req/s, **no autocomplete**. The adapter throttles requests and the UI switches to search-on-Enter | Self-hosted Nominatim (`NOMINATIM_URL`) |
 | Routing | OSRM demo (`router.project-osrm.org`) | Demo only, no SLA. Driving profile only. **No live traffic**. No toll avoidance (`exclude=toll` is rejected). "Shortest" is the shortest of up to 3 candidate routes | Self-hosted OSRM (`OSRM_URL`, `OSRM_SUPPORTS_EXCLUDE=true`), or openrouteservice (`ROUTING_PROVIDER=openrouteservice`, `ORS_API_KEY`) for true shortest routes and toll avoidance |
-| Live traffic | None | Not connected. The UI says so | Implement the adapter in `backend/services/traffic/index.js` (e.g. TomTom or HERE traffic flow) |
+| Live traffic | TomTom, when `TOMTOM_API_KEY` is set; otherwise none | Free tier with daily request limits. The flow layer key (`VITE_TOMTOM_API_KEY`) is visible in the browser: restrict it to your domain in the TomTom dashboard | A paid TomTom plan, or another provider behind `backend/services/traffic/index.js` |
+| Traffic routing | TomTom when `TOMTOM_API_KEY` is set, with OSRM as automatic fallback | Fallback routes are labelled as not including live traffic | `ROUTING_PROVIDER`, `ROUTING_FALLBACK_PROVIDER` |
 
 The API caches geocoding results for 10 minutes and routes for 2 minutes, and coarsens the search-bias location to about 1 km before forwarding it.
 
@@ -180,7 +182,7 @@ All endpoints are under `/api`. Errors have the shape `{ "error": { "code", "mes
 | `GET /geocode/search?q=&lat=&lng=&limit=` | – | Place search |
 | `GET /geocode/reverse?lat=&lng=` | – | Reverse geocode |
 | `POST /routes` `{origin, destination, preference, avoidTolls}` | – | Routes, warnings and applied preferences |
-| `GET /traffic?bbox=` | – | Live traffic flow (empty with the `none` provider) |
+| `GET /traffic/incidents?bbox=` | – | Official traffic incidents (empty without a traffic provider); area up to ~10,000 km² |
 | `GET /reports?bbox=minLng,minLat,maxLng,maxLat` | optional | Active reports; includes `is_mine` and `my_vote` when signed in |
 | `POST /reports` `{report_type, description, latitude, longitude}` | ✔ | Submit a report |
 | `POST /reports/:id/votes` `{type: confirm\|not_present}` | ✔ | Confirm or mark gone |

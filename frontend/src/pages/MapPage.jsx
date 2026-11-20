@@ -15,7 +15,7 @@ import { useNavigation } from '../navigation/useNavigation.js';
 import { useGuidance } from '../navigation/useGuidance.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
 import { routeBbox, useTrafficIncidents } from '../hooks/useTrafficIncidents.js';
-import { incidentAsReport, isNotable } from '../reports/incidents.js';
+import { incidentAsReport, isMapMarker, isNotable } from '../reports/incidents.js';
 import ReportDialog from '../reports/ReportDialog.jsx';
 import { useReports } from '../reports/useReports.js';
 import { useGeolocation } from '../hooks/useGeolocation.js';
@@ -115,6 +115,7 @@ export default function MapPage() {
     enabled: trafficAvailable && (nav.active || trafficOn),
   });
   const notableIncidents = useMemo(() => incidents.filter(isNotable), [incidents]);
+  const incidentMarkers = useMemo(() => incidents.filter(isMapMarker), [incidents]);
   const alertables = useMemo(() => [...reports, ...notableIncidents.map(incidentAsReport)], [reports, notableIncidents]);
 
   const guidance = useGuidance({
@@ -381,7 +382,7 @@ export default function MapPage() {
         onSelectRoute={nav.active ? undefined : setSelectedRouteId}
         traveled={nav.active ? nav.traveled : null}
         reports={reports}
-        incidents={trafficOn || nav.active ? notableIncidents : []}
+        incidents={trafficOn || nav.active ? incidentMarkers : []}
         showTrafficFlow={trafficAvailable && trafficOn}
         onVote={vote}
         onWithdraw={withdraw}

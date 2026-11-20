@@ -1,7 +1,7 @@
 import { render, renderHook, screen, waitFor, act } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { clampBbox, routeBbox, useTrafficIncidents } from '../src/hooks/useTrafficIncidents.js';
-import { incidentAsReport, isNotable } from '../src/reports/incidents.js';
+import { incidentAsReport, isMapMarker, isNotable } from '../src/reports/incidents.js';
 import IncidentPopup from '../src/reports/IncidentPopup.jsx';
 import { incidentIcon } from '../src/maps/markerIcons.js';
 import { useGuidance } from '../src/navigation/useGuidance.js';
@@ -46,6 +46,12 @@ describe('which incidents are shown', () => {
     expect(isNotable(incident({ category: 'construction' }))).toBe(true);
     expect(isNotable(incident({ category: 'traffic_jam', severity: 'moderate' }))).toBe(false);
     expect(isNotable(incident({ category: 'traffic_jam', severity: 'major' }))).toBe(true);
+  });
+
+  it('leaves jams to the road colours instead of map markers', () => {
+    expect(isMapMarker(incident({ category: 'traffic_jam', severity: 'major' }))).toBe(false);
+    expect(isMapMarker(incident({ category: 'construction' }))).toBe(true);
+    expect(isMapMarker(incident())).toBe(true);
   });
 
   it('marks incidents as official when used for navigation alerts', () => {
