@@ -24,7 +24,13 @@ export function createApp(config, overrides = {}) {
 
   const geocoder = overrides.geocoder ?? createGeocoder(config, fetchJson);
   const router = overrides.router ?? createRouter(config, fetchJson);
-  const traffic = overrides.traffic ?? createTrafficProvider(config);
+  const fallbackRouter =
+    overrides.fallbackRouter !== undefined
+      ? overrides.fallbackRouter
+      : config.routing.fallbackProvider && config.routing.fallbackProvider !== router.name
+        ? createRouter(config, fetchJson, config.routing.fallbackProvider)
+        : null;
+  const traffic = overrides.traffic ?? createTrafficProvider(config, fetchJson);
   const supabase =
     overrides.supabase !== undefined
       ? overrides.supabase
@@ -55,10 +61,13 @@ export function createApp(config, overrides = {}) {
       maps: createMapsController({
         geocoder,
         router,
+        fallbackRouter,
         traffic,
         communityAvailable: Boolean(supabase),
         geocodeCache: createCache({ maxEntries: 1000, ttlMs: 10 * 60 * 1000 }),
         routeCache: createCache({ maxEntries: 200, ttlMs: 2 * 60 * 1000 }),
+        // Incidents change slowly; a minute of caching saves API quota.
+        trafficCache: createCache({ maxEntries: 300, ttlMs: 60 * 1000 }),
       }),
       reports: createReportsController(),
       account: createAccountController(),

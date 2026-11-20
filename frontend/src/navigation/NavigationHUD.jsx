@@ -7,17 +7,19 @@ import { getReportType } from '../reports/reportTypes.js';
 function ReportAhead({ item, extra }) {
   const type = getReportType(item.report.report_type);
   const Icon = type.icon;
+  const label = item.report.label || type.label;
+  const official = Boolean(item.report.official);
   return (
-    <div role="status" className="mt-3 flex items-center gap-3 rounded-xl bg-white/10 p-2.5" aria-label={`${type.label} ahead in ${formatDistance(item.distanceAhead)}`}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: type.color }}>
+    <div role="status" className="mt-3 flex items-center gap-3 rounded-xl bg-white/10 p-2.5" aria-label={`${label} ahead in ${formatDistance(item.distanceAhead)}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center ${official ? 'rounded-lg border-2 border-white/60' : 'rounded-full'}`} style={{ background: type.color }}>
         <Icon className="h-5 w-5 text-white" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">
-          {type.label} ahead · {formatDistance(item.distanceAhead)}
+          {label} ahead · {formatDistance(item.distanceAhead)}
         </p>
         <p className="truncate text-xs text-slate-300">
-          Community report{item.report.confirmation_count > 0 ? ` · ${item.report.confirmation_count} confirmed` : ''}
+          {official ? 'Official · TomTom' : `Community report${item.report.confirmation_count > 0 ? ` · ${item.report.confirmation_count} confirmed` : ''}`}
           {extra > 0 ? ` · +${extra} more ahead` : ''}
         </p>
       </div>

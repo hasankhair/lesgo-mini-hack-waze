@@ -83,10 +83,12 @@ export function useGuidance({ active, prepared, progress, reports, rerouting, sp
 
   useEffect(() => {
     if (!nearest || nearest.distanceAhead > ALERT_METERS) return;
-    const { id, report_type: type } = nearest.report;
+    const { id, report_type: type, label, official } = nearest.report;
     if (alerted.current.has(id)) return;
     alerted.current.add(id);
-    say(`${getReportType(type).label} reported ahead, in ${spokenDistance(nearest.distanceAhead)}.`);
+    const what = label || getReportType(type).label;
+    // Official incidents are stated as fact; community ones as "reported".
+    say(`${what} ${official ? 'ahead' : 'reported ahead'}, in ${spokenDistance(nearest.distanceAhead)}.`);
   }, [nearest, say]);
 
   return { voiceOn, voiceSupported: speechSupported(), toggleVoice, say, reportAhead: nearest, reportsAheadCount: upcoming.length };

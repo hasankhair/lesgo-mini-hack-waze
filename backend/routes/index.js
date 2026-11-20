@@ -28,7 +28,7 @@ export function createApiRouter({ maps, reports, account, supabase, limiters }) 
   api.get('/geocode/search', limiters.geocode, validate({ query: geocodeSearchQuery }), maps.search);
   api.get('/geocode/reverse', limiters.geocode, validate({ query: reverseQuery }), maps.reverse);
   api.post('/routes', limiters.route, validate({ body: routeBody }), maps.route);
-  api.get('/traffic', validate({ query: bboxQuery }), maps.trafficFlow);
+  api.get('/traffic/incidents', limiters.traffic, validate({ query: bboxQuery }), maps.trafficIncidents);
 
   // Community reports: browsing is public, writing requires an account.
   api.get('/reports', validate({ query: bboxQuery }), maybeAuth, reports.list);

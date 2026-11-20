@@ -42,3 +42,18 @@ export const DEFAULT_CENTER = [
 export const DEFAULT_ZOOM = Number(env.VITE_DEFAULT_ZOOM) || 13;
 // Below this zoom, community reports are not requested (area would be too large).
 export const MIN_REPORT_ZOOM = 9;
+
+// Live traffic flow overlay (TomTom). Road colours show current speed relative
+// to free flow. The key is visible to the browser: restrict it to your
+// domain in the TomTom developer dashboard.
+const TOMTOM_KEY = env.VITE_TOMTOM_API_KEY || '';
+export const TRAFFIC_FLOW = TOMTOM_KEY
+  ? {
+      light: `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${TOMTOM_KEY}&tileSize=256`,
+      dark: `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?key=${TOMTOM_KEY}&tileSize=256`,
+      attribution: 'Traffic &copy; <a href="https://www.tomtom.com">TomTom</a>',
+      maxZoom: 22,
+    }
+  : null;
+// Traffic incidents are requested from this zoom level (smaller areas).
+export const MIN_INCIDENT_ZOOM = 11;

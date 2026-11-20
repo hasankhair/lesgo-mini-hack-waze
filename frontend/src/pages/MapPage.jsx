@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Info, Radio } from 'lucide-react';
+import { Info, Layers, Radio } from 'lucide-react';
 import MapView from '../maps/MapView.jsx';
-import { MIN_REPORT_ZOOM } from '../maps/tileProviders.js';
+import { MIN_INCIDENT_ZOOM, MIN_REPORT_ZOOM } from '../maps/tileProviders.js';
 import SearchBar from '../components/SearchBar.jsx';
 import Logo from '../components/Logo.jsx';
 import ProfileMenu from '../components/ProfileMenu.jsx';
@@ -14,6 +14,8 @@ import NavigationHUD from '../navigation/NavigationHUD.jsx';
 import { useNavigation } from '../navigation/useNavigation.js';
 import { useGuidance } from '../navigation/useGuidance.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
+import { routeBbox, useTrafficIncidents } from '../hooks/useTrafficIncidents.js';
+import { incidentAsReport, isNotable } from '../reports/incidents.js';
 import ReportDialog from '../reports/ReportDialog.jsx';
 import { useReports } from '../reports/useReports.js';
 import { useGeolocation } from '../hooks/useGeolocation.js';
@@ -43,6 +45,23 @@ export default function MapPage() {
 
   const [map, setMap] = useState(null);
   const [bbox, setBbox] = useState(null);
+  const [incidentViewBbox, setIncidentViewBbox] = useState(null);
+  const [trafficOn, setTrafficOn] = useState(() => {
+    try {
+      return localStorage.getItem('lesgo.traffic') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const toggleTraffic = () =>
+    setTrafficOn((on) => {
+      try {
+        localStorage.setItem('lesgo.traffic', on ? 'off' : 'on');
+      } catch {
+        /* storage unavailable */
+      }
+      return !on;
+    });
   const [mapCenter, setMapCenter] = useState(null);
   const [following, setFollowing] = useState(false);
 
@@ -85,11 +104,24 @@ export default function MapPage() {
     [destination, preference, avoidTolls],
   );
   const nav = useNavigation({ position: geo.position, reroute });
+
+  // Official traffic incidents: the visible area while browsing (if the
+  // traffic layer is on), or the whole route area while navigating so
+  // incidents ahead can be announced.
+  const trafficAvailable = capabilities.traffic.available === true;
+  const navRouteBbox = useMemo(() => (nav.route ? routeBbox(nav.route.geometry) : null), [nav.route]);
+  const incidents = useTrafficIncidents({
+    bbox: nav.active ? navRouteBbox : incidentViewBbox,
+    enabled: trafficAvailable && (nav.active || trafficOn),
+  });
+  const notableIncidents = useMemo(() => incidents.filter(isNotable), [incidents]);
+  const alertables = useMemo(() => [...reports, ...notableIncidents.map(incidentAsReport)], [reports, notableIncidents]);
+
   const guidance = useGuidance({
     active: nav.active,
     prepared: nav.prepared,
     progress: nav.progress,
-    reports,
+    reports: alertables,
     rerouting: nav.rerouting,
   });
   // Keep the screen on for the whole trip.
@@ -100,6 +132,7 @@ export default function MapPage() {
     const c = bounds.getCenter();
     setMapCenter({ lat: c.lat, lng: c.lng });
     setBbox(zoom >= MIN_REPORT_ZOOM ? boundsToBbox(bounds) : null);
+    setIncidentViewBbox(zoom >= MIN_INCIDENT_ZOOM ? boundsToBbox(bounds, 0.05) : null);
   }, []);
 
   useEffect(() => {
@@ -348,6 +381,8 @@ export default function MapPage() {
         onSelectRoute={nav.active ? undefined : setSelectedRouteId}
         traveled={nav.active ? nav.traveled : null}
         reports={reports}
+        incidents={trafficOn || nav.active ? notableIncidents : []}
+        showTrafficFlow={trafficAvailable && trafficOn}
         onVote={vote}
         onWithdraw={withdraw}
         onViewChange={onViewChange}
@@ -397,7 +432,18 @@ export default function MapPage() {
                     ? 'Community reports unavailable'
                     : `Community reports${realtimeStatus === 'live' ? ' · live' : ''}`}
                 </span>
-                {!capabilities.traffic.available && (
+                {trafficAvailable ? (
+                  <button
+                    type="button"
+                    className="chip panel py-1 text-slate-600 dark:text-slate-300"
+                    onClick={toggleTraffic}
+                    aria-pressed={trafficOn}
+                    title="Live road speeds and official incidents from TomTom"
+                  >
+                    <Layers className={`h-3.5 w-3.5 ${trafficOn ? 'text-emerald-500' : 'text-slate-400'}`} aria-hidden />
+                    Live traffic {trafficOn ? 'on' : 'off'}
+                  </button>
+                ) : (
                   <button type="button" className="chip panel py-1 text-slate-600 dark:text-slate-300" onClick={() => setPanel('info')}>
                     <Info className="h-3.5 w-3.5" aria-hidden /> No live traffic data
                   </button>

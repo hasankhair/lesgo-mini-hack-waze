@@ -17,6 +17,7 @@ export function createRateLimiters(limits) {
     api: make(15 * 60 * 1000, limits.apiPerWindow, 'Too many requests. Please slow down.'),
     geocode: make(60 * 1000, limits.geocodePerMinute, 'Too many searches. Please wait a moment.'),
     route: make(60 * 1000, limits.routePerMinute, 'Too many route requests. Please wait a moment.'),
+    traffic: make(60 * 1000, limits.trafficPerMinute ?? 30, 'Too many traffic requests. Please wait a moment.'),
     reports: make(60 * 1000, limits.reportsPerMinute, 'You are reporting too quickly. Please wait a minute.', true),
     votes: make(60 * 1000, limits.votesPerMinute, 'Too many votes. Please wait a minute.', true),
   };

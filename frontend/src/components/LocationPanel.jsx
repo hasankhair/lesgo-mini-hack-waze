@@ -65,7 +65,7 @@ export default function LocationPanel({ geo, realtimeStatus, capabilities, onClo
       <p className="mt-3 flex gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-white/5 dark:text-slate-300">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         {capabilities.traffic.available
-          ? 'Live traffic data is provided by an official data source.'
+          ? 'Road colours, official incidents (square markers) and travel times use live traffic data from TomTom. Round pins are community reports from drivers and are not verified.'
           : 'No live traffic data is connected. Routes use typical road speeds, and incident markers are unverified community reports.'}
       </p>
 

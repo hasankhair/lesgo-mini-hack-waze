@@ -96,3 +96,26 @@ export function placeIcon(kind = 'destination') {
   }
   return cache.get(key);
 }
+
+// Official (TomTom) incidents: a rounded square with a dark border, so they are
+// easy to tell apart from community report pins.
+export function incidentIcon(category) {
+  const key = `incident:${category}`;
+  if (!cache.has(key)) {
+    const { color, icon, label } = getReportType(category);
+    cache.set(
+      key,
+      L.divIcon({
+        className: 'rp-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -14],
+        html: `
+          <div role="img" aria-label="Official: ${label}" style="width:30px;height:30px;border-radius:8px;background:${color};border:2.5px solid #0f172a;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">
+            ${svg(icon)}
+          </div>`,
+      }),
+    );
+  }
+  return cache.get(key);
+}

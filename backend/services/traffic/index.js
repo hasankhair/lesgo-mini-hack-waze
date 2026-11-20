@@ -1,29 +1,34 @@
-// Traffic data adapter. Lesgo ships without a live traffic feed: the
-// "none" provider reports that no official traffic data is available, so the
-// UI shows only community reports and labels them as such.
-//
-// To add a provider (e.g. TomTom Traffic Flow, HERE Traffic), implement:
+import { createTomTomTrafficProvider } from './tomtom.js';
+
+// Traffic data adapter contract:
 //   name: string
 //   available: boolean
-//   getFlow({ bbox: { minLat, minLng, maxLat, maxLng } }) ->
-//     { segments: [{ geometry: [lat,lng][], speedKmh, freeFlowKmh, congestion: 'free'|'moderate'|'heavy' }],
-//       attribution: string }
-// and register it below.
+//   attribution: string | null
+//   getIncidents({ bbox: { minLat, minLng, maxLat, maxLng } }) -> Incident[]
+// Incident: { id, category, label, description, severity, from, to,
+//             delaySeconds, lengthMeters, roadNumbers, startTime, endTime,
+//             latitude, longitude, geometry: [lat,lng][] }
+//
+// The "none" provider reports that no official traffic data is connected, so
+// the UI shows only community reports and labels them as such.
 
 export function createNoTrafficProvider() {
   return {
     name: 'none',
     available: false,
-    async getFlow() {
-      return { segments: [], attribution: null };
+    attribution: null,
+    async getIncidents() {
+      return [];
     },
   };
 }
 
-export function createTrafficProvider(config) {
+export function createTrafficProvider(config, fetchJson) {
   switch (config.traffic.provider) {
     case 'none':
       return createNoTrafficProvider();
+    case 'tomtom':
+      return createTomTomTrafficProvider({ baseUrl: config.tomtom.baseUrl, apiKey: config.tomtom.apiKey, fetchJson });
     default:
       throw new Error(`Unknown TRAFFIC_PROVIDER "${config.traffic.provider}"`);
   }

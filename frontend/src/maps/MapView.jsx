@@ -1,9 +1,10 @@
 import { Fragment, memo } from 'react';
 import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import { useTheme } from '../contexts/ThemeContext.jsx';
-import { DEFAULT_CENTER, DEFAULT_ZOOM, TILE_PROVIDERS } from './tileProviders.js';
-import { placeIcon, reportIcon, userLocationIcon } from './markerIcons.js';
+import { DEFAULT_CENTER, DEFAULT_ZOOM, TILE_PROVIDERS, TRAFFIC_FLOW } from './tileProviders.js';
+import { incidentIcon, placeIcon, reportIcon, userLocationIcon } from './markerIcons.js';
 import ReportPopup from '../reports/ReportPopup.jsx';
+import IncidentPopup from '../reports/IncidentPopup.jsx';
 
 function MapEvents({ onViewChange, onUserPan, onContextMenu }) {
   const map = useMapEvents({
@@ -48,6 +49,8 @@ function MapView({
   onSelectRoute,
   traveled,
   reports = [],
+  incidents = [],
+  showTrafficFlow = false,
   onVote,
   onWithdraw,
   onViewChange,
@@ -68,9 +71,32 @@ function MapView({
       aria-label="Interactive map"
     >
       <TileLayer key={resolved} url={tiles.url} attribution={tiles.attribution} maxZoom={tiles.maxZoom} subdomains={tiles.subdomains ?? 'abc'} className={tiles.className} />
+      {showTrafficFlow && TRAFFIC_FLOW && (
+        <TileLayer
+          key={`flow-${resolved}`}
+          url={resolved === 'dark' ? TRAFFIC_FLOW.dark : TRAFFIC_FLOW.light}
+          attribution={TRAFFIC_FLOW.attribution}
+          maxZoom={TRAFFIC_FLOW.maxZoom}
+          opacity={0.9}
+          zIndex={2}
+        />
+      )}
       <MapEvents onViewChange={onViewChange} onUserPan={onUserPan} onContextMenu={onContextMenu} />
 
       <RouteLines routes={routes} selectedId={selectedRouteId} onSelect={onSelectRoute} traveled={traveled} />
+
+      {incidents.map((incident) => (
+        <Marker
+          key={incident.id}
+          position={[incident.latitude, incident.longitude]}
+          icon={incidentIcon(incident.category)}
+          title={`Official: ${incident.label}`}
+        >
+          <Popup>
+            <IncidentPopup incident={incident} />
+          </Popup>
+        </Marker>
+      ))}
 
       {reports.map((report) => (
         <Marker

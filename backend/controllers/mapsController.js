@@ -5,13 +5,13 @@ const round = (n, digits) => Number(n.toFixed(digits));
 
 // Geocoding, routing, traffic and capability endpoints. These only proxy to
 // the configured providers; no user data is stored.
-export function createMapsController({ geocoder, router, traffic, geocodeCache, routeCache, communityAvailable = false }) {
+export function createMapsController({ geocoder, router, fallbackRouter = null, traffic, geocodeCache, routeCache, trafficCache, communityAvailable = false }) {
   return {
     capabilities(_req, res) {
       res.json({
         geocoding: { provider: geocoder.name, supportsAutocomplete: geocoder.supportsAutocomplete },
         routing: { provider: router.name, ...router.capabilities },
-        traffic: { provider: traffic.name, available: traffic.available },
+        traffic: { provider: traffic.name, available: traffic.available, attribution: traffic.attribution ?? null },
         // Community reports and accounts need Supabase.
         community: { available: communityAvailable },
       });
@@ -37,13 +37,20 @@ export function createMapsController({ geocoder, router, traffic, geocodeCache, 
       const body = req.valid.body;
       const r5 = (p) => ({ lat: round(p.lat, 5), lng: round(p.lng, 5) });
       const params = { ...body, origin: r5(body.origin), destination: r5(body.destination) };
-      const result = await cached(routeCache, JSON.stringify(params), () => planRoutes(router, params));
+      const result = await cached(routeCache, JSON.stringify(params), () => planRoutes(router, params, { fallback: fallbackRouter }));
       res.json(result);
     },
 
-    async trafficFlow(req, res) {
-      const flow = await traffic.getFlow({ bbox: req.valid.query.bbox });
-      res.json({ available: traffic.available, provider: traffic.name, ...flow });
+    // Official traffic incidents in a bounding box (TomTom when configured).
+    async trafficIncidents(req, res) {
+      const b = req.valid.query.bbox;
+      // Round outward to ~1 km so nearby map views share cache entries.
+      const r = (n, f) => f(n * 100) / 100;
+      const bbox = { minLat: r(b.minLat, Math.floor), minLng: r(b.minLng, Math.floor), maxLat: r(b.maxLat, Math.ceil), maxLng: r(b.maxLng, Math.ceil) };
+      const incidents = traffic.available
+        ? await cached(trafficCache, JSON.stringify(bbox), () => traffic.getIncidents({ bbox }))
+        : [];
+      res.json({ available: traffic.available, provider: traffic.name, attribution: traffic.attribution ?? null, source: 'official', incidents });
     },
   };
 }

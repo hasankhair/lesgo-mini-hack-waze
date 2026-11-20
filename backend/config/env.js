@@ -15,6 +15,7 @@ const list = (value, fallback) =>
   value ? value.split(',').map((s) => s.trim()).filter(Boolean) : fallback;
 
 export function loadConfig(env = process.env) {
+  const tomtomKey = env.TOMTOM_API_KEY || '';
   return {
     nodeEnv: env.NODE_ENV || 'development',
     port: int(env.PORT, 4000),
@@ -38,8 +39,16 @@ export function loadConfig(env = process.env) {
       nominatimEmail: env.NOMINATIM_EMAIL || '',
     },
 
+    // TomTom powers traffic-aware routing and official incidents when a key is set.
+    tomtom: {
+      apiKey: tomtomKey,
+      baseUrl: env.TOMTOM_URL || 'https://api.tomtom.com',
+    },
+
     routing: {
-      provider: env.ROUTING_PROVIDER || 'osrm',
+      provider: env.ROUTING_PROVIDER || (tomtomKey ? 'tomtom' : 'osrm'),
+      // Used when the primary provider fails (e.g. TomTom quota exhausted).
+      fallbackProvider: env.ROUTING_FALLBACK_PROVIDER ?? 'osrm',
       osrmUrl: env.OSRM_URL || 'https://router.project-osrm.org',
       // The public OSRM demo server rejects exclude=toll. Enable this only for
       // a self-hosted OSRM built with the car profile's excludable classes.
@@ -49,13 +58,14 @@ export function loadConfig(env = process.env) {
     },
 
     traffic: {
-      provider: env.TRAFFIC_PROVIDER || 'none',
+      provider: env.TRAFFIC_PROVIDER || (tomtomKey ? 'tomtom' : 'none'),
     },
 
     rateLimits: {
       apiPerWindow: int(env.RATE_LIMIT_API_PER_15MIN, 600),
       geocodePerMinute: int(env.RATE_LIMIT_GEOCODE_PER_MIN, 60),
       routePerMinute: int(env.RATE_LIMIT_ROUTE_PER_MIN, 30),
+      trafficPerMinute: int(env.RATE_LIMIT_TRAFFIC_PER_MIN, 30),
       reportsPerMinute: int(env.RATE_LIMIT_REPORTS_PER_MIN, 5),
       votesPerMinute: int(env.RATE_LIMIT_VOTES_PER_MIN, 30),
     },

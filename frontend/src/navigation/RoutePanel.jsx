@@ -128,6 +128,11 @@ export default function RoutePanel({
                         <span className="text-lg font-bold">{formatDuration(route.duration)}</span>
                         <span className="text-sm text-slate-500 dark:text-slate-400">{formatDistance(route.distance)}</span>
                       </div>
+                      {plan.trafficAware && (
+                        <p className={`mt-0.5 text-xs font-medium ${route.trafficDelay >= 120 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                          {route.trafficDelay >= 60 ? `+${formatDuration(route.trafficDelay)} due to traffic` : 'Light traffic'}
+                        </p>
+                      )}
                       <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span className="truncate">{route.summary ? `via ${route.summary}` : i === 0 ? 'Recommended' : `Alternative ${i}`}</span>
                         <span>Arrive {formatEta(route.duration)}</span>
@@ -143,6 +148,11 @@ export default function RoutePanel({
               })}
             </ul>
 
+            {plan.trafficAware && (
+              <p className="mt-3 flex gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> Travel times include live traffic from TomTom.
+              </p>
+            )}
             {plan.warnings.length > 0 && (
               <ul className="mt-3 space-y-1">
                 {plan.warnings.map((w) => (

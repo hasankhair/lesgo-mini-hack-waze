@@ -1,5 +1,6 @@
 import { createOsrmRouter } from './osrm.js';
 import { createOpenRouteServiceRouter } from './openrouteservice.js';
+import { createTomTomRouter } from './tomtom.js';
 
 // Router adapter contract:
 //   name: string
@@ -7,14 +8,16 @@ import { createOpenRouteServiceRouter } from './openrouteservice.js';
 //   route({ origin, destination, preference, avoidTolls }) -> Route[]
 // Route: { id, distance (m), duration (s), summary, geometry: [lat,lng][], steps: Step[] }
 // Step:  { instruction, name, distance, duration, type, modifier, location: [lat,lng] }
-export function createRouter(config, fetchJson) {
-  switch (config.routing.provider) {
+export function createRouter(config, fetchJson, provider = config.routing.provider) {
+  switch (provider) {
     case 'osrm':
       return createOsrmRouter({
         baseUrl: config.routing.osrmUrl,
         supportsExclude: config.routing.osrmSupportsExclude,
         fetchJson,
       });
+    case 'tomtom':
+      return createTomTomRouter({ baseUrl: config.tomtom.baseUrl, apiKey: config.tomtom.apiKey, fetchJson });
     case 'openrouteservice':
       return createOpenRouteServiceRouter({
         baseUrl: config.routing.orsUrl,
@@ -22,7 +25,7 @@ export function createRouter(config, fetchJson) {
         fetchJson,
       });
     default:
-      throw new Error(`Unknown ROUTING_PROVIDER "${config.routing.provider}"`);
+      throw new Error(`Unknown ROUTING_PROVIDER "${provider}"`);
   }
 }
 
@@ -33,7 +36,24 @@ export function rankRoutes(routes, preference) {
   return [...routes].sort((a, b) => a[key] - b[key]);
 }
 
-export async function planRoutes(router, { origin, destination, preference = 'fastest', avoidTolls = false }) {
+// Falls back to `fallback` when the primary provider fails for reasons other
+// than "no route" (outage, quota exhausted, timeout).
+export async function planRoutes(router, params, { fallback } = {}) {
+  try {
+    return await planWith(router, params);
+  } catch (err) {
+    const recoverable = !err?.status || err.status >= 500;
+    if (!fallback || !recoverable) throw err;
+    const plan = await planWith(fallback, params);
+    plan.warnings.unshift(`${providerLabel(router.name)} is unavailable right now, so these routes don't include live traffic.`);
+    plan.fallbackFrom = router.name;
+    return plan;
+  }
+}
+
+const providerLabel = (name) => ({ tomtom: 'Live traffic routing (TomTom)' })[name] ?? `The ${name} routing service`;
+
+async function planWith(router, { origin, destination, preference = 'fastest', avoidTolls = false }) {
   const { capabilities } = router;
   const warnings = [];
   const tollsApplied = avoidTolls && capabilities.supportsAvoidTolls;
