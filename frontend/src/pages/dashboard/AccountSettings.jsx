@@ -5,6 +5,23 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { formatDate } from '../../utils/format.js';
+import { Avatar } from '../../components/ProfileMenu.jsx';
+import { Card, Switch } from './ui.jsx';
+
+// A labelled settings row: description on the left, control on the right.
+function SettingRow({ title, description, children, htmlFor }) {
+  return (
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="min-w-0">
+        <label htmlFor={htmlFor} className="font-medium text-navy-900 dark:text-white">
+          {title}
+        </label>
+        {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
 
 export function ProfileSection({ profile, setProfile }) {
   const { notify } = useToast();
@@ -26,36 +43,49 @@ export function ProfileSection({ profile, setProfile }) {
     }
   };
 
-  if (!profile) return <p className="text-sm text-slate-500">Loading profile…</p>;
+  if (!profile) {
+    return (
+      <div className="card p-6" role="status">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 animate-pulse rounded-full bg-slate-100 dark:bg-white/10" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-40 animate-pulse rounded bg-slate-100 dark:bg-white/10" />
+            <div className="h-3 w-56 animate-pulse rounded bg-slate-100 dark:bg-white/10" />
+          </div>
+        </div>
+        <span className="sr-only">Loading profile…</span>
+      </div>
+    );
+  }
 
   return (
-    <section aria-labelledby="profile-heading">
-      <h2 id="profile-heading" className="text-lg font-semibold">
-        Profile
-      </h2>
-      <div className="mt-4 flex items-center gap-4">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-600 text-2xl font-bold text-white">
-          {profile.username.charAt(0).toUpperCase()}
-        </span>
-        <div>
-          <p className="text-lg font-semibold">{profile.username}</p>
-          <p className="text-sm text-slate-500">{profile.email}</p>
-          <p className="text-xs text-slate-400">Member since {formatDate(profile.created_at)}</p>
+    <div className="space-y-6">
+      <Card bodyClassName="p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Avatar name={profile.username} className="h-16 w-16 text-2xl" />
+          <div className="min-w-0">
+            <p className="truncate text-xl font-semibold text-navy-900 dark:text-white">{profile.username}</p>
+            <p className="truncate text-sm text-muted">{profile.email}</p>
+            <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Member since {formatDate(profile.created_at)}</p>
+          </div>
         </div>
-      </div>
-      <form onSubmit={save} className="mt-6 max-w-sm">
-        <label htmlFor="username" className="label">
-          Username
-        </label>
-        <div className="flex gap-2">
-          <input id="username" className="input" value={username} maxLength={30} onChange={(e) => setUsername(e.target.value)} />
-          <button type="submit" className="btn-primary" disabled={saving || username.trim() === profile.username}>
-            {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Save
+      </Card>
+
+      <Card title="Public name" description="Shown on new reports you submit.">
+        <form onSubmit={save} className="flex max-w-md flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label htmlFor="username" className="label">
+              Username
+            </label>
+            <input id="username" className="input" value={username} maxLength={30} onChange={(e) => setUsername(e.target.value)} />
+          </div>
+          <button type="submit" className="btn-primary h-11" disabled={saving || username.trim() === profile.username}>
+            {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Save changes
           </button>
-        </div>
-        <p className="mt-1 text-xs text-slate-500">Shown on new reports you submit.</p>
-      </form>
-    </section>
+        </form>
+        <p className="hint">3–30 characters: letters, numbers, dots, dashes or underscores.</p>
+      </Card>
+    </div>
   );
 }
 
@@ -69,6 +99,7 @@ export function SettingsSection({ profile, setProfile }) {
   const toggleHistory = async (value) => {
     try {
       setProfile(await updateProfile({ save_history: value }));
+      notify(value ? 'Trips will be saved.' : 'New trips won’t be saved.', 'success');
     } catch (err) {
       notify(err.message, 'error');
     }
@@ -93,73 +124,59 @@ export function SettingsSection({ profile, setProfile }) {
   };
 
   return (
-    <section aria-labelledby="settings-heading" className="space-y-8">
-      <h2 id="settings-heading" className="text-lg font-semibold">
-        Account settings
-      </h2>
+    <div className="space-y-6">
+      <Card title="Appearance">
+        <SettingRow title="Theme" description="Match your device, or choose light or dark.">
+          <div role="radiogroup" aria-label="Theme" className="segmented">
+            {[
+              ['light', 'Light', Sun],
+              ['dark', 'Dark', Moon],
+              ['system', 'System', Monitor],
+            ].map(([value, label, Icon]) => (
+              <button key={value} type="button" role="radio" aria-checked={theme === value} onClick={() => setTheme(value)} className="segment">
+                <Icon className="h-4 w-4" aria-hidden /> {label}
+              </button>
+            ))}
+          </div>
+        </SettingRow>
+      </Card>
 
-      <div>
-        <p className="label">Appearance</p>
-        <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-white/10">
-          {[
-            ['light', 'Light', Sun],
-            ['dark', 'Dark', Moon],
-            ['system', 'System', Monitor],
-          ].map(([value, label, Icon]) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={theme === value}
-              onClick={() => setTheme(value)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${theme === value ? 'bg-white shadow dark:bg-navy-700' : ''}`}
-            >
-              <Icon className="h-4 w-4" aria-hidden /> {label}
-            </button>
-          ))}
+      <Card title="Privacy">
+        <div className="divide-y divide-slate-100 dark:divide-white/5">
+          <SettingRow title="Save my navigation history" description="Used for recent destinations. Turn off to stop recording new trips." htmlFor="save-history">
+            <Switch id="save-history" label="Save my navigation history" checked={profile?.save_history ?? true} disabled={!profile} onChange={toggleHistory} />
+          </SettingRow>
+          <div className="py-4 last:pb-0">
+            <p className="text-sm text-muted">
+              Location is used only while the app is open and you allow it. Continuous tracking stops when navigation ends.
+            </p>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      <div>
-        <p className="label">Privacy</p>
-        <label className="flex items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            className="mt-1 accent-brand-600"
-            checked={profile?.save_history ?? true}
-            disabled={!profile}
-            onChange={(e) => toggleHistory(e.target.checked)}
-          />
-          <span>
-            Save my navigation history
-            <span className="block text-xs text-slate-500">Used for recent destinations. Turn off to stop recording new trips.</span>
-          </span>
-        </label>
-        <p className="mt-3 text-xs text-slate-500">
-          Location is used only while the app is open and you allow it. Continuous tracking stops when navigation ends.
-        </p>
-      </div>
-
-      <form onSubmit={changePassword} className="max-w-sm">
-        <label htmlFor="new-password" className="label">
-          Change password
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="new-password"
-            type="password"
-            autoComplete="new-password"
-            className="input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="New password"
-          />
-          <button type="submit" className="btn-secondary" disabled={busy || !password}>
-            Update
+      <Card title="Security">
+        <form onSubmit={changePassword} className="flex max-w-md flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label htmlFor="new-password" className="label">
+              Change password
+            </label>
+            <input
+              id="new-password"
+              type="password"
+              autoComplete="new-password"
+              className="input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
+            />
+          </div>
+          <button type="submit" className="btn-secondary h-11" disabled={busy || !password}>
+            {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Update password
           </button>
-        </div>
-      </form>
-    </section>
+        </form>
+        <p className="hint">At least 8 characters.</p>
+      </Card>
+    </div>
   );
 }
 

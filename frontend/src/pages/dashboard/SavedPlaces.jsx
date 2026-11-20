@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Briefcase, House, LoaderCircle, Navigation, Star, Trash2 } from 'lucide-react';
+import { Bookmark, Briefcase, House, LoaderCircle, Navigation, Plus, Star, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SearchBar from '../../components/SearchBar.jsx';
 import * as defaultService from '../../services/accountService.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import { Card, EmptyState, ErrorState, IconTile, ListSkeleton } from './ui.jsx';
 
 const ICONS = { home: House, work: Briefcase, favorite: Star };
+const TONES = { home: 'brand', work: 'navy', favorite: 'amber' };
+const LABELS = { home: 'Home', work: 'Work', favorite: 'Favourite' };
 const ORDER = { home: 0, work: 1, favorite: 2 };
 
 export const navigateHref = ({ name, lat, lng, label }) => {
@@ -68,72 +71,70 @@ export default function SavedPlaces({ service = defaultService }) {
   const sorted = places ? [...places].sort((a, b) => ORDER[a.category] - ORDER[b.category]) : [];
 
   return (
-    <section aria-labelledby="saved-heading">
-      <h2 id="saved-heading" className="text-lg font-semibold">
-        Saved places
-      </h2>
-      <p className="text-sm text-slate-500">Home, Work and favourite destinations for one-tap navigation.</p>
-
-      <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-white/5">
-        <p className="label">Add a place</p>
+    <div className="space-y-6">
+      <Card title="Add a place" description="Search for an address, then save it as Home, Work or a favourite." bodyClassName="p-5">
         <SearchBar onSelect={setPending} onClear={() => setPending(null)} selectedLabel={pending?.name ?? ''} placeholder="Search for an address or place" />
         {pending && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {['home', 'work', 'favorite'].map((c) => {
-              const Icon = ICONS[c];
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  aria-pressed={category === c}
-                  onClick={() => setCategory(c)}
-                  className={`btn py-1.5 capitalize ${category === c ? 'bg-brand-600 text-white' : 'btn-secondary'}`}
-                >
-                  <Icon className="h-4 w-4" aria-hidden /> {c === 'favorite' ? 'Favourite' : c}
-                </button>
-              );
-            })}
-            <button type="button" className="btn-primary ml-auto py-1.5" onClick={save} disabled={saving}>
-              {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Save place
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div role="radiogroup" aria-label="Save as" className="segmented">
+              {['home', 'work', 'favorite'].map((c) => {
+                const Icon = ICONS[c];
+                return (
+                  <button key={c} type="button" role="radio" aria-checked={category === c} aria-pressed={category === c} onClick={() => setCategory(c)} className="segment">
+                    <Icon className="h-4 w-4" aria-hidden /> {LABELS[c]}
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" className="btn-primary ml-auto" onClick={save} disabled={saving}>
+              {saving ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />} Save place
             </button>
           </div>
         )}
-      </div>
+      </Card>
 
-      {error && (
-        <p role="alert" className="mt-4 text-sm text-red-600">
-          {error}
-        </p>
-      )}
-      {places === null && !error && <p className="mt-4 text-sm text-slate-500">Loading…</p>}
-      {places?.length === 0 && <p className="mt-4 text-sm text-slate-500">No saved places yet.</p>}
-
-      <ul className="mt-4 divide-y divide-slate-100 dark:divide-white/5">
-        {sorted.map((place) => {
-          const Icon = ICONS[place.category] ?? Star;
-          return (
-            <li key={place.id} className="flex items-center gap-3 py-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-                <Icon className="h-5 w-5" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{place.location_name}</p>
-                {place.address && <p className="truncate text-xs text-slate-500">{place.address}</p>}
-              </div>
-              <Link
-                to={navigateHref({ name: place.location_name, label: place.address, lat: place.latitude, lng: place.longitude })}
-                className="icon-btn h-9 w-9"
-                aria-label={`Navigate to ${place.location_name}`}
-              >
-                <Navigation className="h-4 w-4" />
-              </Link>
-              <button type="button" className="icon-btn h-9 w-9 text-red-600" onClick={() => remove(place)} aria-label={`Delete ${place.location_name}`}>
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+      <Card title="Your places" description="Tap the arrow to start navigating." bodyClassName="">
+        {error && <ErrorState message={error} />}
+        {places === null && !error && <ListSkeleton />}
+        {places?.length === 0 && (
+          <EmptyState icon={Bookmark} title="No saved places yet." text="Save Home, Work and places you visit often for one-tap navigation." />
+        )}
+        {sorted.length > 0 && (
+          <ul className="divide-y divide-slate-100 dark:divide-white/5">
+            {sorted.map((place) => {
+              const Icon = ICONS[place.category] ?? Star;
+              return (
+                <li key={place.id} className="list-row">
+                  <IconTile icon={Icon} tone={TONES[place.category] ?? 'brand'} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-navy-900 dark:text-white">{place.location_name}</span>
+                      {place.category !== 'favorite' && place.location_name !== LABELS[place.category] && <span className="badge-neutral">{LABELS[place.category]}</span>}
+                    </p>
+                    {place.address && <p className="truncate text-[13px] text-slate-600 dark:text-slate-400">{place.address}</p>}
+                  </div>
+                  <Link
+                    to={navigateHref({ name: place.location_name, label: place.address, lat: place.latitude, lng: place.longitude })}
+                    className="btn-secondary btn-sm"
+                    aria-label={`Navigate to ${place.location_name}`}
+                  >
+                    <Navigation className="h-3.5 w-3.5" aria-hidden />
+                    <span className="hidden sm:inline">Go</span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="icon-btn h-9 w-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                    onClick={() => remove(place)}
+                    aria-label={`Delete ${place.location_name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

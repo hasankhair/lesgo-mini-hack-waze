@@ -92,7 +92,7 @@ function MapView({
           icon={incidentIcon(incident.category)}
           title={`Official: ${incident.label}`}
         >
-          <Popup>
+          <Popup autoPanPaddingTopLeft={[16, 196]} autoPanPaddingBottomRight={[16, 108]}>
             <IncidentPopup incident={incident} />
           </Popup>
         </Marker>
@@ -105,7 +105,7 @@ function MapView({
           icon={reportIcon(report.report_type, { confirmed: report.confirmation_count > 0 })}
           title={report.report_type}
         >
-          <Popup>
+          <Popup autoPanPaddingTopLeft={[16, 196]} autoPanPaddingBottomRight={[16, 108]}>
             <ReportPopup report={report} onVote={onVote} onWithdraw={onWithdraw} />
           </Popup>
         </Marker>

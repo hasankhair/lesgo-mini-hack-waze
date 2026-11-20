@@ -32,9 +32,9 @@ export default function SavePlaceDialog({ place, onSave, onClose }) {
   };
 
   return (
-    <Sheet title="Save place" onClose={onClose}>
+    <Sheet title="Save place" description={place.label || place.name} onClose={onClose}>
       <form onSubmit={submit}>
-        <p className="mb-3 truncate text-sm text-slate-500">{place.label || place.name}</p>
+        <p className="label">Save as</p>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Place type">
           {CATEGORIES.map(({ value, label, icon: Icon }) => (
             <button
@@ -43,7 +43,7 @@ export default function SavePlaceDialog({ place, onSave, onClose }) {
               role="radio"
               aria-checked={category === value}
               onClick={() => setCategory(value)}
-              className={`btn flex-col py-3 ${category === value ? 'bg-brand-600 text-white' : 'btn-secondary'}`}
+              className={`btn-secondary h-auto flex-col gap-1.5 py-3 ${category === value ? 'btn-selected' : ''}`}
             >
               <Icon className="h-5 w-5" aria-hidden /> {label}
             </button>
@@ -57,13 +57,13 @@ export default function SavePlaceDialog({ place, onSave, onClose }) {
             <input id="place-name" className="input" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
         )}
-        {category !== 'favorite' && <p className="mt-3 text-xs text-slate-500">This replaces your current {category} location, if any.</p>}
+        {category !== 'favorite' && <p className="hint">This replaces your current {category} location, if any.</p>}
         {error && (
-          <p role="alert" className="mt-3 text-sm text-red-600">
+          <p role="alert" className="alert-error mt-3">
             {error}
           </p>
         )}
-        <button type="submit" className="btn-primary mt-5 w-full" disabled={saving}>
+        <button type="submit" className="btn-primary btn-lg mt-6 w-full" disabled={saving}>
           {saving && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Save
         </button>
       </form>

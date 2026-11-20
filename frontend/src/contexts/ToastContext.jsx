@@ -4,9 +4,9 @@ import { CircleAlert, CircleCheck, Info, X } from 'lucide-react';
 const ToastContext = createContext(null);
 
 const STYLES = {
-  success: ['text-emerald-600 dark:text-emerald-400', CircleCheck],
-  error: ['text-red-600 dark:text-red-400', CircleAlert],
-  info: ['text-brand-600 dark:text-brand-400', Info],
+  success: ['bg-go-100 text-go-700 dark:bg-go-500/15 dark:text-green-300', CircleCheck],
+  error: ['bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300', CircleAlert],
+  info: ['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200', Info],
 };
 
 let nextId = 1;
@@ -41,11 +41,13 @@ export function ToastProvider({ children }) {
             <div
               key={t.id}
               role={t.type === 'error' ? 'alert' : 'status'}
-              className="panel pointer-events-auto flex w-full max-w-sm animate-slide-up items-start gap-3 px-4 py-3 text-sm"
+              className="panel pointer-events-auto flex w-full max-w-sm animate-slide-up items-start gap-3 p-3 pr-2 shadow-overlay"
             >
-              <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${color}`} aria-hidden />
-              <p className="flex-1">{t.message}</p>
-              <button type="button" onClick={() => dismiss(t.id)} className="text-slate-400 hover:text-slate-600" aria-label="Dismiss">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${color}`}>
+                <Icon className="h-4.5 w-4.5" aria-hidden />
+              </span>
+              <p className="flex-1 self-center text-sm leading-snug font-medium text-slate-800 dark:text-slate-100">{t.message}</p>
+              <button type="button" onClick={() => dismiss(t.id)} className="icon-btn h-8 w-8" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>

@@ -2,8 +2,22 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ==========================================================================
+   Lesgo design system
+   --------------------------------------------------------------------------
+   Primary   brand (blue)   actions, links, selection, focus
+   Secondary navy           headings, navigation surfaces, turn-by-turn HUD
+   Accents   go (green)     live / success / confirmed (from the logo road)
+             amber          the Report action and warnings
+             red            destructive actions and errors
+   Neutrals  slate          text, borders, surfaces
+   Text contrast: body text uses slate-900/700, secondary text slate-600,
+   captions slate-500 (all >= 4.5:1 on white). slate-400 is for icons and
+   placeholders only, never for text that must be read.
+   ========================================================================== */
+
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
@@ -16,21 +30,37 @@
   --color-brand-800: #1e40af;
   --color-brand-900: #1e3a8a;
 
+  --color-navy-600: #2a3a57;
   --color-navy-700: #1e293b;
   --color-navy-800: #172033;
   --color-navy-900: #0f172a;
   --color-navy-950: #0b1120;
 
+  --color-go-50: #f0fdf4;
+  --color-go-100: #dcfce7;
+  --color-go-500: #22c55e;
+  --color-go-600: #16a34a;
+  --color-go-700: #15803d;
+
+  /* App surfaces */
+  --color-canvas: #f5f7fb;
+  --color-canvas-dark: #0b1120;
+
+  /* Elevation: soft, low-contrast shadows */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow-float: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px -6px rgb(15 23 42 / 0.16);
+  --shadow-overlay: 0 2px 6px rgb(15 23 42 / 0.08), 0 20px 40px -12px rgb(15 23 42 / 0.28);
+
   --animate-pulse-ring: pulse-ring 2s ease-out infinite;
-  --animate-slide-up: slide-up 0.25s ease-out;
-  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-up: slide-up 0.22s ease-out;
+  --animate-fade-in: fade-in 0.18s ease-out;
 
   @keyframes pulse-ring {
     0% { transform: scale(0.6); opacity: 0.7; }
     100% { transform: scale(2.2); opacity: 0; }
   }
   @keyframes slide-up {
-    from { transform: translateY(16px); opacity: 0; }
+    from { transform: translateY(12px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
   @keyframes fade-in {
@@ -43,77 +73,232 @@
   html, body, #root {
     height: 100%;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-white text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100;
+    @apply bg-white text-[15px] leading-normal text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100;
     -webkit-tap-highlight-color: transparent;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1, h2, h3 {
+    @apply tracking-tight text-navy-900 dark:text-white;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
   }
+  ::selection {
+    @apply bg-brand-200 text-navy-900;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-@utility panel {
-  @apply rounded-2xl border border-slate-200/80 bg-white/95 shadow-xl shadow-slate-900/10 backdrop-blur
-    dark:border-white/10 dark:bg-navy-800/95 dark:shadow-black/40;
+/* --- Typography ---------------------------------------------------------- */
+@utility page-title {
+  @apply text-2xl font-semibold tracking-tight text-navy-900 dark:text-white;
 }
+@utility section-title {
+  @apply text-base font-semibold text-navy-900 dark:text-white;
+}
+@utility eyebrow {
+  @apply text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400;
+}
+@utility text-muted {
+  @apply text-slate-600 dark:text-slate-300;
+}
+@utility text-caption {
+  @apply text-xs text-slate-500 dark:text-slate-400;
+}
+
+/* --- Surfaces ------------------------------------------------------------ */
+/* Floating panels over the map */
+@utility panel {
+  @apply rounded-2xl border border-slate-200/90 bg-white/[0.97] shadow-float backdrop-blur-md
+    dark:border-white/10 dark:bg-navy-800/[0.97] dark:shadow-black/40;
+}
+/* Content cards on regular pages */
+@utility card {
+  @apply rounded-2xl border border-slate-200 bg-white shadow-card dark:border-white/10 dark:bg-navy-900;
+}
+@utility divider {
+  @apply border-slate-200 dark:border-white/10;
+}
+
+/* --- Buttons --------------------------------------------------------------
+   Sizes: default 40px, btn-sm 32px, btn-lg 48px. Every variant has hover,
+   active, focus-visible and disabled states. */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
-    disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold whitespace-nowrap
+    transition-colors duration-150 select-none
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
+    disabled:pointer-events-none disabled:opacity-50;
+}
+@utility btn-sm {
+  @apply h-8 rounded-lg px-3 text-[13px];
+}
+@utility btn-lg {
+  @apply h-12 rounded-xl px-5 text-base;
 }
 @utility btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800;
+  @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800;
 }
 @utility btn-secondary {
-  @apply btn bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15;
+  @apply btn border border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100
+    dark:border-white/15 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10;
+}
+@utility btn-ghost {
+  @apply btn text-slate-700 hover:bg-slate-100 active:bg-slate-200 dark:text-slate-200 dark:hover:bg-white/10;
 }
 @utility btn-danger {
-  @apply btn bg-red-600 text-white hover:bg-red-700;
+  @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800;
 }
+@utility btn-accent {
+  @apply btn bg-amber-400 text-navy-900 shadow-sm hover:bg-amber-300 active:bg-amber-500;
+}
+/* Toggle button that is on: pair with aria-pressed */
+@utility btn-selected {
+  @apply border-brand-600 bg-brand-600 text-white hover:border-brand-700 hover:bg-brand-700 dark:border-brand-500 dark:bg-brand-600;
+}
+
 @utility icon-btn {
-  @apply inline-flex h-11 w-11 items-center justify-center rounded-full transition
-    text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/10;
+  @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-600 transition-colors
+    hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
+    disabled:pointer-events-none disabled:opacity-40
+    dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white;
 }
 @utility fab {
-  @apply panel inline-flex h-12 w-12 items-center justify-center rounded-full text-slate-700 transition
-    hover:text-brand-600 active:scale-95 dark:text-slate-200 dark:hover:text-brand-400;
+  @apply panel inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-700 transition
+    hover:text-brand-600 active:scale-95 dark:text-slate-200 dark:hover:text-brand-300;
 }
+
+/* --- Form controls ------------------------------------------------------- */
 @utility input {
-  @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400
-    transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:outline-none
-    dark:border-white/15 dark:bg-navy-900 dark:text-slate-100;
+  @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-slate-900 shadow-sm
+    placeholder:text-slate-400 transition
+    hover:border-slate-400
+    focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none
+    disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500
+    dark:border-white/15 dark:bg-navy-950 dark:text-slate-100 dark:hover:border-white/25;
+}
+@utility textarea {
+  @apply input h-auto min-h-24 resize-none py-2.5 leading-relaxed;
 }
 @utility label {
-  @apply mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300;
+  @apply mb-1.5 block text-sm font-medium text-slate-800 dark:text-slate-200;
+}
+@utility hint {
+  @apply mt-1.5 text-[13px] text-slate-500 dark:text-slate-400;
+}
+@utility checkbox {
+  @apply h-4.5 w-4.5 shrink-0 rounded border-slate-300 accent-brand-600;
+}
+
+/* Segmented control: a group of role="radio" buttons with aria-checked */
+@utility segmented {
+  @apply inline-flex rounded-xl bg-slate-100 p-1 dark:bg-white/10;
+}
+@utility segment {
+  @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-slate-600 transition
+    hover:text-slate-900
+    aria-checked:bg-white aria-checked:text-brand-700 aria-checked:shadow-sm
+    dark:text-slate-300 dark:hover:text-white dark:aria-checked:bg-navy-700 dark:aria-checked:text-white;
+}
+
+/* --- Badges & chips ------------------------------------------------------ */
+@utility badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+}
+@utility badge-success {
+  @apply badge bg-go-100 text-go-700 dark:bg-go-500/15 dark:text-green-300;
+}
+@utility badge-neutral {
+  @apply badge bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300;
+}
+@utility badge-info {
+  @apply badge bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200;
+}
+@utility badge-warning {
+  @apply badge bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200;
+}
+@utility badge-danger {
+  @apply badge bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300;
 }
 @utility chip {
   @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
 }
+/* Status pill that floats over the map */
+@utility map-chip {
+  @apply panel inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-slate-700 transition
+    hover:text-slate-900 dark:text-slate-200 dark:hover:text-white;
+}
+/* Dot used in live/status indicators */
+@utility status-dot {
+  @apply inline-block h-2 w-2 shrink-0 rounded-full;
+}
 
-/* Leaflet integration */
+/* --- Feedback ------------------------------------------------------------ */
+@utility alert {
+  @apply flex gap-2.5 rounded-xl border px-3.5 py-3 text-sm leading-snug;
+}
+@utility alert-error {
+  @apply alert border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200;
+}
+@utility alert-warning {
+  @apply alert border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100;
+}
+@utility alert-info {
+  @apply alert border-brand-200 bg-brand-50 text-brand-900 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-100;
+}
+@utility alert-neutral {
+  @apply alert border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300;
+}
+
+/* --- Lists --------------------------------------------------------------- */
+@utility list-row {
+  @apply flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03];
+}
+@utility menu-item {
+  @apply flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors
+    hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white;
+}
+@utility nav-item {
+  @apply flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors
+    hover:bg-slate-100 hover:text-slate-900
+    aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-700
+    dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white dark:aria-[current=page]:bg-brand-500/15 dark:aria-[current=page]:text-brand-200;
+}
+
+/* --- Leaflet integration ------------------------------------------------- */
 .leaflet-container {
-  @apply h-full w-full bg-slate-200 font-sans dark:bg-navy-900;
+  @apply h-full w-full bg-[#eef0f3] font-sans dark:bg-navy-900;
 }
 .leaflet-div-icon.rp-icon {
   background: transparent;
   border: none;
 }
 .leaflet-popup-content-wrapper {
-  @apply rounded-2xl p-0 shadow-xl dark:bg-navy-800 dark:text-slate-100;
+  @apply rounded-2xl border border-slate-200 p-0 shadow-overlay dark:border-white/10 dark:bg-navy-800 dark:text-slate-100;
 }
 .leaflet-popup-content {
-  @apply m-0 w-72!;
+  @apply m-0 w-76! max-w-[calc(100vw-48px)] text-[15px] leading-normal;
 }
 .leaflet-popup-tip {
   @apply dark:bg-navy-800;
 }
 .leaflet-container a.leaflet-popup-close-button {
-  @apply top-2! right-2! text-slate-400!;
+  @apply top-3! right-3! flex! h-7! w-7! items-center justify-center rounded-full text-lg! text-slate-500! hover:bg-slate-100 hover:text-slate-800! dark:hover:bg-white/10;
 }
 .leaflet-control-attribution {
-  @apply rounded-tl-lg bg-white/80! text-[10px]! dark:bg-navy-900/80! dark:text-slate-400!;
+  @apply rounded-tl-lg bg-white/85! px-1.5! text-[11px]! text-slate-600! dark:bg-navy-900/85! dark:text-slate-400!;
 }
 .leaflet-control-attribution a {
-  @apply dark:text-brand-300!;
+  @apply text-brand-700! dark:text-brand-300!;
 }
 .rp-dark-tiles {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6);

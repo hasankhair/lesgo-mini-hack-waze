@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Info, Layers, Radio } from 'lucide-react';
+import { Info, Layers } from 'lucide-react';
 import MapView from '../maps/MapView.jsx';
 import { MIN_INCIDENT_ZOOM, MIN_REPORT_ZOOM } from '../maps/tileProviders.js';
 import SearchBar from '../components/SearchBar.jsx';
@@ -414,7 +414,7 @@ export default function MapPage() {
       ) : (
         <>
           <header className="pointer-events-none absolute inset-x-0 top-0 z-[1000] flex items-start gap-2 p-2 sm:gap-3 sm:p-4">
-            <div className="panel pointer-events-auto hidden h-12 items-center rounded-full px-3 md:flex">
+            <div className="panel pointer-events-auto hidden h-12 items-center rounded-full pr-4 pl-2 md:flex">
               <Logo />
             </div>
             <div className="pointer-events-auto flex-1 sm:mx-auto sm:max-w-xl">
@@ -427,8 +427,11 @@ export default function MapPage() {
                 autocomplete={capabilities.geocoding.supportsAutocomplete}
               />
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="chip panel py-1 text-slate-600 dark:text-slate-300" title="Incident markers are reported by drivers and are not verified.">
-                  <Radio className={`h-3.5 w-3.5 ${realtimeStatus === 'live' ? 'text-emerald-500' : 'text-slate-400'}`} aria-hidden />
+                <span className="map-chip" title="Incident pins are reported by drivers and are not verified.">
+                  <span
+                    className={`status-dot ${realtimeStatus === 'live' ? 'bg-go-500 shadow-[0_0_0_3px] shadow-go-500/20' : 'bg-slate-400'}`}
+                    aria-hidden
+                  />
                   {capabilities.community?.available === false
                     ? 'Community reports unavailable'
                     : `Community reports${realtimeStatus === 'live' ? ' · live' : ''}`}
@@ -436,17 +439,17 @@ export default function MapPage() {
                 {trafficAvailable ? (
                   <button
                     type="button"
-                    className="chip panel py-1 text-slate-600 dark:text-slate-300"
+                    className="map-chip aria-pressed:border-go-500/40"
                     onClick={toggleTraffic}
                     aria-pressed={trafficOn}
                     title="Live road speeds and official incidents from TomTom"
                   >
-                    <Layers className={`h-3.5 w-3.5 ${trafficOn ? 'text-emerald-500' : 'text-slate-400'}`} aria-hidden />
+                    <Layers className={`h-3.5 w-3.5 ${trafficOn ? 'text-go-600 dark:text-green-400' : 'text-slate-400'}`} aria-hidden />
                     Live traffic {trafficOn ? 'on' : 'off'}
                   </button>
                 ) : (
-                  <button type="button" className="chip panel py-1 text-slate-600 dark:text-slate-300" onClick={() => setPanel('info')}>
-                    <Info className="h-3.5 w-3.5" aria-hidden /> No live traffic data
+                  <button type="button" className="map-chip" onClick={() => setPanel('info')}>
+                    <Info className="h-3.5 w-3.5 text-slate-500" aria-hidden /> No live traffic data
                   </button>
                 )}
               </div>
@@ -488,6 +491,7 @@ export default function MapPage() {
             onReport={() => setReportOpen(true)}
             onRouteOptions={() => setPanel((p) => (p === 'route' ? null : 'route'))}
             routeOptionsAvailable={Boolean(destination)}
+            routeOpen={panel === 'route'}
             onInfo={() => setPanel((p) => (p === 'info' ? null : 'info'))}
             infoOpen={panel === 'info'}
             onZoomIn={() => map?.zoomIn()}

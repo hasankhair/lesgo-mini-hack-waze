@@ -64,7 +64,9 @@ export default function NavigationHUD({
         )}
         {progress?.arrived ? (
           <div className="flex items-center gap-4">
-            <Flag className="h-10 w-10 shrink-0 text-emerald-400" aria-hidden />
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-go-600">
+              <Flag className="h-8 w-8 text-white" aria-hidden />
+            </span>
             <div>
               <p className="text-2xl font-bold">You have arrived</p>
               <p className="text-sm text-slate-300">{next?.instruction}</p>
@@ -73,10 +75,12 @@ export default function NavigationHUD({
         ) : progress ? (
           <>
             <div className="flex items-center gap-4">
-              <ManeuverIcon step={next} className="h-12 w-12 shrink-0 text-brand-300" />
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600">
+                <ManeuverIcon step={next} className="h-9 w-9 text-white" />
+              </span>
               <div className="min-w-0">
-                <p className="text-3xl leading-none font-bold">{formatDistance(progress.distanceToNextStep)}</p>
-                <p className="mt-1 text-base leading-snug font-medium">{next?.instruction}</p>
+                <p className="text-3xl leading-none font-bold tracking-tight tabular-nums">{formatDistance(progress.distanceToNextStep)}</p>
+                <p className="mt-1.5 text-base leading-snug font-medium text-slate-100">{next?.instruction}</p>
               </div>
             </div>
             {progress.followingStep && (
@@ -104,40 +108,41 @@ export default function NavigationHUD({
 
       <section
         aria-label="Trip information"
-        className="panel absolute inset-x-2 bottom-2 z-[1000] flex items-center gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:w-[32rem] sm:-translate-x-1/2"
+        className="panel absolute inset-x-2 bottom-2 z-[1000] flex items-center gap-2 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-overlay sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[34rem] sm:-translate-x-1/2 sm:gap-3 sm:p-3"
       >
         <div
-          className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-full border-4 border-slate-200 dark:border-white/15"
+          className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-[3px] border-slate-200 sm:h-14 sm:w-14 dark:border-white/15"
           aria-label={kmh !== null ? `Speed ${kmh} kilometres per hour` : 'Speed unavailable'}
         >
-          <span className="text-lg leading-none font-bold">{kmh ?? '–'}</span>
-          <span className="text-[10px] text-slate-500">km/h</span>
+          <span className="text-base leading-none font-bold sm:text-lg">{kmh ?? '–'}</span>
+          <span className="text-[10px] font-medium text-slate-500">km/h</span>
         </div>
-        <dl className="grid flex-1 grid-cols-3 gap-1 text-center">
-          <div>
-            <dt className="text-[11px] text-slate-500 uppercase">Arrive</dt>
-            <dd className="text-lg font-bold">{progress ? formatClock(progress.eta) : '–'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-slate-500 uppercase">Time</dt>
-            <dd className="text-lg font-bold">{progress ? formatDuration(progress.remainingDuration) : '–'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-slate-500 uppercase">Distance</dt>
-            <dd className="text-lg font-bold">{progress ? formatDistance(progress.remainingDistance) : '–'}</dd>
-          </div>
+        <dl className="grid min-w-0 flex-1 grid-cols-3 gap-1 text-center">
+          {[
+            ['Arrive', progress ? formatClock(progress.eta) : '–'],
+            ['Time', progress ? formatDuration(progress.remainingDuration) : '–'],
+            ['Distance', progress ? formatDistance(progress.remainingDistance) : '–'],
+          ].map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">{label}</dt>
+              <dd className="truncate text-[15px] font-bold whitespace-nowrap text-navy-900 tabular-nums sm:text-lg dark:text-white">{value}</dd>
+            </div>
+          ))}
         </dl>
-        {!following && (
-          <button type="button" className="icon-btn bg-slate-100 dark:bg-white/10" onClick={onRecenter} aria-label="Recenter on my position">
-            <LocateFixed className="h-5 w-5" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {!following && (
+            <button type="button" className="icon-btn bg-slate-100 dark:bg-white/10" onClick={onRecenter} aria-label="Recenter on my position">
+              <LocateFixed className="h-5 w-5" />
+            </button>
+          )}
+          <button type="button" className="icon-btn bg-amber-400 text-navy-900 hover:bg-amber-300 hover:text-navy-900" onClick={onReport} aria-label="Report an incident">
+            <Megaphone className="h-5 w-5" />
           </button>
-        )}
-        <button type="button" className="icon-btn bg-amber-400 text-navy-900 hover:bg-amber-300" onClick={onReport} aria-label="Report an incident">
-          <Megaphone className="h-5 w-5" />
-        </button>
-        <button type="button" className="btn-danger h-12 rounded-full px-4" onClick={onEnd}>
-          <X className="h-5 w-5" aria-hidden /> End
-        </button>
+          <button type="button" className="btn-danger h-11 rounded-full px-3 sm:px-4" onClick={onEnd} aria-label="End navigation">
+            <X className="h-5 w-5" aria-hidden />
+            <span className="hidden sm:inline">End</span>
+          </button>
+        </div>
       </section>
     </>
   );

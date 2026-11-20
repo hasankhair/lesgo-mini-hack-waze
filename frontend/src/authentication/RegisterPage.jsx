@@ -55,7 +55,7 @@ export default function RegisterPage() {
             We sent a confirmation link to <strong>{sentTo}</strong>. Open it to activate your account, then sign in.
           </p>
         </div>
-        <Link to="/login" className="btn-primary mt-6 w-full">
+        <Link to="/login" className="btn-primary btn-lg mt-6 w-full">
           Go to sign in
         </Link>
       </AuthLayout>
@@ -69,7 +69,7 @@ export default function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+          <Link to="/login" className="font-semibold text-brand-700 hover:underline dark:text-brand-300">
             Sign in
           </Link>
         </>
@@ -78,25 +78,25 @@ export default function RegisterPage() {
       <form onSubmit={submit} noValidate>
         <FormError message={error} />
         <label htmlFor="username" className="label">
-          Username <span className="font-normal text-slate-400">(shown on your reports)</span>
+          Username <span className="font-normal text-slate-500">(shown on your reports)</span>
         </label>
         <input id="username" autoComplete="username" className="input" value={form.username} onChange={set('username')} maxLength={30} />
-        <label htmlFor="email" className="label mt-4">
+        <label htmlFor="email" className="label mt-5">
           Email
         </label>
         <input id="email" type="email" autoComplete="email" className="input" value={form.email} onChange={set('email')} />
-        <label htmlFor="password" className="label mt-4">
+        <label htmlFor="password" className="label mt-5">
           Password
         </label>
         <input id="password" type="password" autoComplete="new-password" className="input" value={form.password} onChange={set('password')} />
-        <label htmlFor="confirm" className="label mt-4">
+        <label htmlFor="confirm" className="label mt-5">
           Confirm password
         </label>
         <input id="confirm" type="password" autoComplete="new-password" className="input" value={form.confirm} onChange={set('confirm')} />
-        <button type="submit" className="btn-primary mt-6 w-full py-3" disabled={busy || !isConfigured}>
+        <button type="submit" className="btn-primary btn-lg mt-6 w-full" disabled={busy || !isConfigured}>
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Create account
         </button>
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="hint mt-4 leading-relaxed">
           We store only your email, username and the data you choose to save. Your location is never stored unless you submit a report or save a place.
         </p>
       </form>

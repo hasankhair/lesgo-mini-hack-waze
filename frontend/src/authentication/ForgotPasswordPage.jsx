@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
       title="Reset your password"
       subtitle="We'll email you a link to choose a new password."
       footer={
-        <Link to="/login" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+        <Link to="/login" className="font-semibold text-brand-700 hover:underline dark:text-brand-300">
           Back to sign in
         </Link>
       }
@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
             Email
           </label>
           <input id="email" type="email" autoComplete="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button type="submit" className="btn-primary mt-6 w-full py-3" disabled={busy || !isConfigured}>
+          <button type="submit" className="btn-primary btn-lg mt-6 w-full" disabled={busy || !isConfigured}>
             {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Send reset link
           </button>
         </form>

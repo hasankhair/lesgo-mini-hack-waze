@@ -42,7 +42,7 @@ export default function LoginPage() {
       footer={
         <>
           New to Lesgo?{' '}
-          <Link to="/register" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+          <Link to="/register" className="font-semibold text-brand-700 hover:underline dark:text-brand-300">
             Create an account
           </Link>
         </>
@@ -54,11 +54,11 @@ export default function LoginPage() {
           Email
         </label>
         <input id="email" type="email" autoComplete="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-5 flex items-center justify-between">
           <label htmlFor="password" className="label mb-0">
             Password
           </label>
-          <Link to="/forgot-password" className="text-xs text-brand-600 hover:underline dark:text-brand-400">
+          <Link to="/forgot-password" className="text-[13px] font-medium text-brand-700 hover:underline dark:text-brand-300">
             Forgot password?
           </Link>
         </div>
@@ -71,7 +71,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit" className="btn-primary mt-6 w-full py-3" disabled={busy || !isConfigured}>
+        <button type="submit" className="btn-primary btn-lg mt-6 w-full" disabled={busy || !isConfigured}>
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Sign in
         </button>
       </form>

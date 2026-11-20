@@ -1,44 +1,93 @@
 import { Link } from 'react-router-dom';
+import { ArrowLeft, BellRing, CircleAlert, Route, ShieldCheck } from 'lucide-react';
 import { LogoMark } from '../components/Logo.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
+const HIGHLIGHTS = [
+  { icon: Route, title: 'Live traffic routing', text: 'Routes and arrival times that account for current traffic.' },
+  { icon: BellRing, title: 'Alerts on your route', text: 'Spoken warnings about accidents, closures and hazards ahead.' },
+  { icon: ShieldCheck, title: 'Private by default', text: 'Your location is only used while you allow it.' },
+];
+
+function Wordmark({ className = '' }) {
+  return (
+    <span className={`text-2xl font-extrabold tracking-tight ${className}`}>
+      Les<span className="text-brand-500">go</span>
+    </span>
+  );
+}
+
+// Split layout on large screens: brand panel on the left, form on the right.
+// Single centred column on small screens.
 export default function AuthLayout({ title, subtitle, children, footer }) {
   const { isConfigured } = useAuth();
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 p-4 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2" aria-label="Back to map">
-          <LogoMark className="h-16" />
-          <span className="text-2xl font-extrabold tracking-tight">
-            Les<span className="text-brand-600 dark:text-brand-400">go</span>
+    <div className="flex min-h-dvh bg-canvas dark:bg-canvas-dark">
+      <aside className="relative hidden w-[44%] max-w-xl flex-col justify-between overflow-hidden bg-navy-900 p-10 text-white lg:flex">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{ background: 'radial-gradient(60% 50% at 20% 10%, rgb(37 99 235 / 0.45), transparent), radial-gradient(50% 40% at 90% 90%, rgb(34 197 94 / 0.25), transparent)' }}
+          aria-hidden
+        />
+        <Link to="/" className="relative flex items-center gap-3" aria-label="Back to map">
+          <span className="flex h-12 items-center rounded-2xl bg-white px-2 shadow-sm">
+            <LogoMark className="h-10" />
           </span>
+          <Wordmark className="text-white" />
         </Link>
-        <div className="panel p-6 sm:p-8">
-          <h1 className="text-xl font-bold">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
+        <div className="relative">
+          <h2 className="max-w-sm text-3xl leading-tight font-semibold text-white">Drive smarter with your community.</h2>
+          <ul className="mt-8 space-y-5">
+            {HIGHLIGHTS.map(({ icon: Icon, title: t, text }) => (
+              <li key={t} className="flex gap-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                  <Icon className="h-5 w-5 text-brand-300" aria-hidden />
+                </span>
+                <div>
+                  <p className="font-semibold text-white">{t}</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-slate-300">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-sm text-slate-400">Traffic data © TomTom · Map data © OpenStreetMap contributors</p>
+      </aside>
+
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-8">
+        <div className="w-full max-w-[25rem]">
+          <Link to="/" className="mb-8 flex items-center justify-center gap-2 lg:hidden" aria-label="Back to map">
+            <LogoMark className="h-14" />
+            <Wordmark className="text-navy-900 dark:text-white" />
+          </Link>
+
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="mt-1.5 text-[15px] text-muted">{subtitle}</p>}
           {!isConfigured && (
-            <p role="alert" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            <p role="alert" className="alert-warning mt-5">
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               Accounts are disabled: set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable sign-in.
             </p>
           )}
-          <div className="mt-6">{children}</div>
+          <div className="card mt-6 p-6 sm:p-7">{children}</div>
+          {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
+          <p className="mt-4 text-center">
+            <Link to="/" className="btn-ghost btn-sm text-slate-600 dark:text-slate-300">
+              <ArrowLeft className="h-4 w-4" aria-hidden /> Back to the map
+            </Link>
+          </p>
         </div>
-        {footer && <div className="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">{footer}</div>}
-        <p className="mt-6 text-center text-sm">
-          <Link to="/" className="text-brand-600 hover:underline dark:text-brand-400">
-            ← Back to the map
-          </Link>
-        </p>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
 
 export function FormError({ message }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
-      {message}
+    <p role="alert" className="alert-error mb-5">
+      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <span>{message}</span>
     </p>
   );
 }

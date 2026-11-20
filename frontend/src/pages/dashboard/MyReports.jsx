@@ -1,20 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Megaphone } from 'lucide-react';
 import { listMyReports } from '../../services/reportsService.js';
 import { getReportType } from '../../reports/reportTypes.js';
 import { formatDate } from '../../utils/format.js';
+import { Card, EmptyState, ErrorState, ListSkeleton } from './ui.jsx';
 
-const STATUS = {
-  active: ['Active', 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300'],
-  cleared: ['Cleared by drivers', 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300'],
-  expired: ['Expired', 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300'],
-  removed: ['Withdrawn', 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300'],
+export const STATUS = {
+  active: ['Active', 'badge-success'],
+  cleared: ['Cleared by drivers', 'badge-neutral'],
+  expired: ['Expired', 'badge-neutral'],
+  removed: ['Withdrawn', 'badge-neutral'],
 };
 
-const effectiveStatus = (r) => (r.status === 'active' && new Date(r.expires_at) <= new Date() ? 'expired' : r.status);
+export const effectiveStatus = (r, now = Date.now()) => (r.status === 'active' && new Date(r.expires_at).getTime() <= now ? 'expired' : r.status);
+
+const FILTERS = [
+  ['all', 'All'],
+  ['active', 'Active'],
+  ['past', 'Past'],
+];
+
+export function ReportRow({ report: r }) {
+  const type = getReportType(r.report_type);
+  const Icon = type.icon;
+  const [label, cls] = STATUS[effectiveStatus(r)] ?? STATUS.expired;
+  return (
+    <li className="list-row">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm" style={{ background: type.color }}>
+        <Icon className="h-5 w-5 text-white" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-semibold text-navy-900 dark:text-white">{type.label}</p>
+        <p className="truncate text-[13px] text-slate-600 dark:text-slate-400">
+          {formatDate(r.created_at)} · {r.confirmation_count} confirmed
+          {r.description ? ` · ${r.description}` : ''}
+        </p>
+      </div>
+      <span className={cls}>{label}</span>
+    </li>
+  );
+}
 
 export default function MyReports() {
   const [reports, setReports] = useState(null);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     listMyReports(100)
@@ -22,37 +52,37 @@ export default function MyReports() {
       .catch((err) => setError(err.message));
   }, []);
 
+  const shown = useMemo(() => {
+    if (!reports) return [];
+    if (filter === 'active') return reports.filter((r) => effectiveStatus(r) === 'active');
+    if (filter === 'past') return reports.filter((r) => effectiveStatus(r) !== 'active');
+    return reports;
+  }, [reports, filter]);
+
   return (
-    <section aria-labelledby="reports-heading">
-      <h2 id="reports-heading" className="text-lg font-semibold">
-        My traffic reports
-      </h2>
-      <p className="text-sm text-slate-500">Everything you have reported, including expired reports.</p>
-      {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
-      {reports === null && !error && <p className="mt-4 text-sm text-slate-500">Loading…</p>}
-      {reports?.length === 0 && <p className="mt-4 text-sm text-slate-500">You haven’t reported anything yet.</p>}
-      <ul className="mt-4 divide-y divide-slate-100 dark:divide-white/5">
-        {reports?.map((r) => {
-          const type = getReportType(r.report_type);
-          const Icon = type.icon;
-          const [label, cls] = STATUS[effectiveStatus(r)] ?? STATUS.expired;
-          return (
-            <li key={r.id} className="flex items-center gap-3 py-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: type.color }}>
-                <Icon className="h-5 w-5 text-white" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{type.label}</p>
-                <p className="truncate text-xs text-slate-500">
-                  {formatDate(r.created_at)} · {r.confirmation_count} confirmed
-                  {r.description ? ` · ${r.description}` : ''}
-                </p>
-              </div>
-              <span className={`chip ${cls}`}>{label}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <Card
+      title="Traffic reports"
+      description="Everything you have reported, including expired reports."
+      bodyClassName=""
+      actions={
+        reports?.length > 0 && (
+          <div role="radiogroup" aria-label="Filter reports" className="segmented">
+            {FILTERS.map(([id, label]) => (
+              <button key={id} type="button" role="radio" aria-checked={filter === id} className="segment" onClick={() => setFilter(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )
+      }
+    >
+      {error && <ErrorState message={error} />}
+      {reports === null && !error && <ListSkeleton />}
+      {reports?.length === 0 && (
+        <EmptyState icon={Megaphone} title="You haven’t reported anything yet." text="Use the Report button on the map to warn other drivers about accidents, jams and hazards." />
+      )}
+      {reports?.length > 0 && shown.length === 0 && <p className="px-5 py-8 text-center text-sm text-muted">No {filter} reports.</p>}
+      {shown.length > 0 && <ul className="divide-y divide-slate-100 dark:divide-white/5">{shown.map((r) => <ReportRow key={r.id} report={r} />)}</ul>}
+    </Card>
   );
 }

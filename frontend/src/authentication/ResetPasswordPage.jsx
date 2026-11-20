@@ -51,11 +51,11 @@ export default function ResetPasswordPage() {
           New password
         </label>
         <input id="password" type="password" autoComplete="new-password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <label htmlFor="confirm" className="label mt-4">
+        <label htmlFor="confirm" className="label mt-5">
           Confirm new password
         </label>
         <input id="confirm" type="password" autoComplete="new-password" className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        <button type="submit" className="btn-primary mt-6 w-full py-3" disabled={busy || loading}>
+        <button type="submit" className="btn-primary btn-lg mt-6 w-full" disabled={busy || loading}>
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />} Update password
         </button>
       </form>
