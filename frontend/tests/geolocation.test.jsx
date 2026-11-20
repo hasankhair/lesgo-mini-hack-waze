@@ -33,6 +33,22 @@ describe('useGeolocation', () => {
     expect(geo.watchPosition).not.toHaveBeenCalled();
   });
 
+  it('requests location on mount when asked to', () => {
+    const geo = fakeGeolocation();
+    geo.getCurrentPosition.mockImplementation((success) => success(fix()));
+    const { result } = renderHook(() => useGeolocation({ geolocation: geo, locateOnMount: true }));
+    expect(geo.getCurrentPosition).toHaveBeenCalled();
+    expect(result.current.position).toMatchObject({ lat: 52.52, lng: 13.405 });
+    expect(geo.watchPosition).not.toHaveBeenCalled(); // a single fix, not tracking
+  });
+
+  it('reports denial from the on-mount request', () => {
+    const geo = fakeGeolocation();
+    geo.getCurrentPosition.mockImplementation((_s, error) => error({ code: 1 }));
+    const { result } = renderHook(() => useGeolocation({ geolocation: geo, locateOnMount: true }));
+    expect(result.current.status).toBe('denied');
+  });
+
   it('detects the current location with speed and heading', () => {
     const geo = fakeGeolocation();
     geo.getCurrentPosition.mockImplementation((success) => success(fix()));

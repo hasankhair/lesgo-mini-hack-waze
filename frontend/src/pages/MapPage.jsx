@@ -37,7 +37,8 @@ export default function MapPage() {
   const { user, client } = useAuth();
   const { notify } = useToast();
   const capabilities = useCapabilities();
-  const geo = useGeolocation();
+  // Ask for location on load so the map can open where the user is.
+  const geo = useGeolocation({ locateOnMount: true });
   const [params, setParams] = useSearchParams();
 
   const [map, setMap] = useState(null);
@@ -62,6 +63,9 @@ export default function MapPage() {
   const positionRef = useRef(geo.position);
   positionRef.current = geo.position;
   const centerOnNextFix = useRef(false);
+  // Jump to the user's first position fix, unless they've already moved the
+  // map or opened a destination link: 'pending' | 'done' | 'skip'.
+  const initialView = useRef(destination ? 'skip' : 'pending');
 
   const { reports, upsert, remove, realtimeStatus } = useReports({
     bbox: capabilities.community?.available ? bbox : null,
@@ -107,7 +111,10 @@ export default function MapPage() {
   useEffect(() => {
     if (!map || !geo.position) return;
     const here = [geo.position.lat, geo.position.lng];
-    if (centerOnNextFix.current) {
+    if (initialView.current === 'pending') {
+      initialView.current = 'done';
+      map.setView(here, 16, { animate: false });
+    } else if (centerOnNextFix.current) {
       centerOnNextFix.current = false;
       map.flyTo(here, Math.max(map.getZoom(), 16), { duration: 0.8 });
     } else if (following) {
@@ -117,9 +124,15 @@ export default function MapPage() {
 
   const errorRef = useRef(geo.status);
   useEffect(() => {
-    if (errorRef.current !== geo.status && geo.error && centerOnNextFix.current) {
-      notify(geo.error, 'error', { duration: 6000 });
-      centerOnNextFix.current = false;
+    if (errorRef.current !== geo.status && geo.error) {
+      if (centerOnNextFix.current) {
+        notify(geo.error, 'error', { duration: 6000 });
+        centerOnNextFix.current = false;
+      } else if (initialView.current === 'pending') {
+        // The on-load request failed: keep the default view and say why, once.
+        initialView.current = 'skip';
+        notify(`${geo.error} Tap My location to try again.`, 'info', { duration: 7000 });
+      }
     }
     errorRef.current = geo.status;
   }, [geo.status, geo.error, notify]);
@@ -164,6 +177,7 @@ export default function MapPage() {
   const selectDestination = useCallback(
     (place) => {
       setDestination(place);
+      if (initialView.current === 'pending') initialView.current = 'skip';
       setPlan(null);
       setPlanError(null);
       setPanel('route');
@@ -337,7 +351,10 @@ export default function MapPage() {
         onVote={vote}
         onWithdraw={withdraw}
         onViewChange={onViewChange}
-        onUserPan={() => setFollowing(false)}
+        onUserPan={() => {
+          setFollowing(false);
+          if (initialView.current === 'pending') initialView.current = 'skip';
+        }}
         onContextMenu={nav.active ? undefined : onContextMenu}
       />
 

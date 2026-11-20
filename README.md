@@ -107,7 +107,7 @@ The migration adds `traffic_reports` to the `supabase_realtime` publication. Tha
 ## Features
 
 - **Map**: full-screen Leaflet map, custom location marker with heading and accuracy circle, zoom/pan, report markers with a distinct colour and icon per category, route lines with clickable alternatives. Right-click or long-press the map to navigate to that point.
-- **GPS**: location is requested only after the user taps *My location*, or automatically if the browser already granted permission. Shows coordinates, accuracy and speed (Info panel). Handles denied permission, unavailable GPS, timeouts and unsupported browsers. Continuous tracking runs only during navigation and stops when it ends. *Stop using location* also discards the position.
+- **GPS**: when the map opens it asks for the user's location (the browser shows its permission prompt the first time) and starts there. If permission is denied or no fix arrives, it stays on the default city (Kuala Lumpur, set with `VITE_DEFAULT_LAT`/`VITE_DEFAULT_LNG`) and says how to retry. Opening a destination link or moving the map first cancels the jump. Shows coordinates, accuracy and speed (Info panel). Handles denied permission, unavailable GPS, timeouts and unsupported browsers. Continuous tracking runs only during navigation and stops when it ends. *Stop using location* also discards the position.
 - **Search**: suggestions as you type (debounced, keyboard accessible), biased to your location, with category icons for petrol stations, restaurants, shops and cities. Saved places and recent destinations appear when the field is empty. Shows clear messages for no results or errors.
 - **Routing**: recommended route plus alternatives, with distance, duration and arrival time. Preferences are Fastest, Shortest and Avoid tolls (when supported). Warnings explain each limitation.
 - **Turn-by-turn**: next instruction and the distance to it, the following instruction, remaining distance and time, ETA and speed. Detects when you leave the route (allowing for GPS accuracy) and recalculates. Detects arrival.
@@ -142,7 +142,7 @@ The API caches geocoding results for 10 minutes and routes for 2 minutes, and co
 - **Input validation**: every API input passes through a zod schema, and the database also enforces constraints. Text is length-limited, control characters are stripped, and the UI renders text without HTML. Report bounding boxes are capped in size.
 - **Rate limiting**: per-IP limits for the API overall, geocoding and routing. Per-user limits for reports and votes. The database also caps reports at 10 per 10 minutes per user and rejects duplicates within about 100 m.
 - **Other measures**: Helmet security headers, a CORS allow-list, a 20 kB JSON body limit, error responses that never leak internals, and login redirects restricted to in-app paths.
-- **Location**: never requested without a user action or an existing browser grant. It is only sent to the server to plan a route, submit a report, or save history (origin rounded to ~110 m, and only if history is enabled). Users can delete history or turn it off, and can stop location access at any time.
+- **Location**: read only through the browser's permission prompt. The map requests a single position on load; continuous tracking runs only during navigation. It is only sent to the server to plan a route, submit a report, or save history (origin rounded to ~110 m, and only if history is enabled). Users can delete history or turn it off, and can stop location access at any time.
 
 ## Testing
 

@@ -10,8 +10,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 //         'timeout'     took too long to get a fix
 //         'unsupported' browser has no Geolocation API
 //
-// Location is only requested after locate() or startTracking() is called, or
-// automatically when the browser reports permission was already granted.
+// Location is requested when locate() or startTracking() is called. With
+// `locateOnMount`, it is requested as soon as the component mounts (the
+// browser shows its permission prompt the first time). Otherwise it is only
+// requested automatically when permission was already granted.
 
 const OPTIONS = { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 };
 
@@ -33,7 +35,7 @@ const ERROR_MESSAGES = {
   unsupported: 'This browser does not support location services.',
 };
 
-export function useGeolocation({ autoLocateIfGranted = true, geolocation } = {}) {
+export function useGeolocation({ locateOnMount = false, autoLocateIfGranted = true, geolocation } = {}) {
   const geo = geolocation ?? (typeof navigator !== 'undefined' ? navigator.geolocation : undefined);
   const [status, setStatus] = useState(geo ? 'idle' : 'unsupported');
   const [position, setPosition] = useState(null);
@@ -91,6 +93,10 @@ export function useGeolocation({ autoLocateIfGranted = true, geolocation } = {})
   }, [geo, stopTracking]);
 
   useEffect(() => {
+    if (locateOnMount) {
+      locate();
+      return undefined;
+    }
     if (!autoLocateIfGranted || !geo || !navigator.permissions?.query) return undefined;
     let cancelled = false;
     navigator.permissions
@@ -103,7 +109,7 @@ export function useGeolocation({ autoLocateIfGranted = true, geolocation } = {})
     return () => {
       cancelled = true;
     };
-  }, [autoLocateIfGranted, geo, locate]);
+  }, [locateOnMount, autoLocateIfGranted, geo, locate]);
 
   useEffect(() => () => {
     if (watchId.current !== null) geo?.clearWatch(watchId.current);
