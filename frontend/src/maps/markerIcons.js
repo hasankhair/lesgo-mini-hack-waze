@@ -1,11 +1,27 @@
 import L from 'leaflet';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { getReportType } from '../reports/reportTypes.js';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { REPORT_TYPES, getReportType } from '../reports/reportTypes.js';
 
 // Leaflet divIcons rendered from Lucide icons. Cached per variant.
 const cache = new Map();
-const svg = (Icon, size = 16) => renderToStaticMarkup(createElement(Icon, { size, color: 'white', strokeWidth: 2.5, 'aria-hidden': true }));
+
+// Renders a Lucide icon to an SVG string with the React DOM client the app
+// already loads (react-dom/server would add ~500 KB to the bundle). This must
+// not run while React is rendering, so all report glyphs are rendered once,
+// when this module is first imported.
+function renderSvg(Icon, size = 16) {
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  flushSync(() => root.render(createElement(Icon, { size, color: 'white', strokeWidth: 2.5, 'aria-hidden': true })));
+  const html = host.innerHTML;
+  root.unmount();
+  return html;
+}
+
+const GLYPHS = new Map(REPORT_TYPES.map((t) => [t.icon, renderSvg(t.icon)]));
+const svg = (Icon) => GLYPHS.get(Icon) ?? '';
 
 export function reportIcon(type, { confirmed = false } = {}) {
   const key = `report:${type}:${confirmed}`;

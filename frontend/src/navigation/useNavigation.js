@@ -62,5 +62,5 @@ export function useNavigation({ position, reroute }) {
     return [...prepared.line.slice(0, progress.segmentIndex + 1), progress.snapped];
   }, [prepared, progress]);
 
-  return { active: Boolean(route), route, progress, rerouting, traveled, start, end };
+  return { active: Boolean(route), route, prepared, progress, rerouting, traveled, start, end };
 }

@@ -12,6 +12,8 @@ import SavePlaceDialog from '../components/SavePlaceDialog.jsx';
 import RoutePanel from '../navigation/RoutePanel.jsx';
 import NavigationHUD from '../navigation/NavigationHUD.jsx';
 import { useNavigation } from '../navigation/useNavigation.js';
+import { useGuidance } from '../navigation/useGuidance.js';
+import { useWakeLock } from '../hooks/useWakeLock.js';
 import ReportDialog from '../reports/ReportDialog.jsx';
 import { useReports } from '../reports/useReports.js';
 import { useGeolocation } from '../hooks/useGeolocation.js';
@@ -79,6 +81,15 @@ export default function MapPage() {
     [destination, preference, avoidTolls],
   );
   const nav = useNavigation({ position: geo.position, reroute });
+  const guidance = useGuidance({
+    active: nav.active,
+    prepared: nav.prepared,
+    progress: nav.progress,
+    reports,
+    rerouting: nav.rerouting,
+  });
+  // Keep the screen on for the whole trip.
+  useWakeLock(nav.active);
 
   // ---- Map view tracking ----------------------------------------------------
   const onViewChange = useCallback((bounds, zoom) => {
@@ -208,6 +219,9 @@ export default function MapPage() {
   }, [map, plan, nav.active]);
 
   const startNavigation = (route) => {
+    // Speaking inside the click handler unlocks speech on iOS Safari, which
+    // blocks speech that doesn't start from a user tap.
+    guidance.say('Starting navigation.', { urgent: true });
     nav.start(route);
     geo.startTracking();
     setFollowing(true);
@@ -340,6 +354,9 @@ export default function MapPage() {
           }}
           onEnd={endNavigation}
           onReport={() => setReportOpen(true)}
+          reportAhead={guidance.reportAhead}
+          reportsAheadCount={guidance.reportsAheadCount}
+          voice={{ supported: guidance.voiceSupported, on: guidance.voiceOn, toggle: guidance.toggleVoice }}
         />
       ) : (
         <>

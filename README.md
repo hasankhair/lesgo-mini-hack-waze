@@ -111,6 +111,10 @@ The migration adds `traffic_reports` to the `supabase_realtime` publication. Tha
 - **Search**: suggestions as you type (debounced, keyboard accessible), biased to your location, with category icons for petrol stations, restaurants, shops and cities. Saved places and recent destinations appear when the field is empty. Shows clear messages for no results or errors.
 - **Routing**: recommended route plus alternatives, with distance, duration and arrival time. Preferences are Fastest, Shortest and Avoid tolls (when supported). Warnings explain each limitation.
 - **Turn-by-turn**: next instruction and the distance to it, the following instruction, remaining distance and time, ETA and speed. Detects when you leave the route (allowing for GPS accuracy) and recalculates. Detects arrival.
+- **Voice guidance**: spoken instructions at about 1 km, 250 m and at the turn, plus "route recalculated" and arrival messages. Uses the browser's built-in speech; the mute choice is remembered.
+- **Incident ahead alerts**: while navigating, community reports within 40 m of the route and up to 2 km ahead show in a banner with a countdown, and are announced once at 1 km.
+- **Screen stays on** during navigation (Screen Wake Lock API, where supported), and is released when navigation ends.
+- **Installable**: a web app manifest and icons let users add Lesgo to their home screen and open it full-screen.
 - **Community reports**: 9 categories, optional description, at your GPS position or the map centre. Other drivers can confirm a report or mark it gone. Each report shows its reporter's username, age, confirmations and expiry. New reports, count changes and removals appear for everyone instantly via Realtime.
 - **Accounts**: registration (with email confirmation if enabled in Supabase), login, logout, password reset, change password. You can browse the map signed out. Reporting and voting require an account.
 - **Dashboard** (`/dashboard`): profile and username, saved places (add via search, set Home/Work, navigate, delete), recent destinations (navigate, delete, clear), your report history with statuses, and settings (theme, history on/off, password).

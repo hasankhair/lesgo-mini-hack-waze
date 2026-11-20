@@ -36,8 +36,8 @@ export const TILE_PROVIDERS = {
 };
 
 export const DEFAULT_CENTER = [
-  Number(env.VITE_DEFAULT_LAT) || 51.5074,
-  Number(env.VITE_DEFAULT_LNG) || -0.1278,
+  Number(env.VITE_DEFAULT_LAT) || 3.1478, // Kuala Lumpur city centre
+  Number(env.VITE_DEFAULT_LNG) || 101.6953,
 ];
 export const DEFAULT_ZOOM = Number(env.VITE_DEFAULT_ZOOM) || 13;
 // Below this zoom, community reports are not requested (area would be too large).
