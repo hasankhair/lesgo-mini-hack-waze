@@ -8,7 +8,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
     <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 p-4 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-2" aria-label="Back to map">
-          <LogoMark className="h-11 w-11" />
+          <LogoMark className="h-16" />
           <span className="text-2xl font-extrabold tracking-tight">
             Les<span className="text-brand-600 dark:text-brand-400">go</span>
           </span>

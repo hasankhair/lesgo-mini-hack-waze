@@ -1,18 +1,8 @@
 import { Link } from 'react-router-dom';
 
-export function LogoMark({ className = 'h-9 w-9' }) {
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-hidden>
-      <defs>
-        <linearGradient id="rp-logo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3b82f6" />
-          <stop offset="1" stopColor="#1e3a8a" />
-        </linearGradient>
-      </defs>
-      <path d="M32 4C20.4 4 11 13.2 11 24.6 11 40 32 60 32 60s21-20 21-35.4C53 13.2 43.6 4 32 4z" fill="url(#rp-logo)" />
-      <path d="M17 26h8l4-8 6 16 4-8h8" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+// The logo image is 1455×1048 (about 1.39:1). Size it by height; width follows.
+export function LogoMark({ className = 'h-10' }) {
+  return <img src="/logo.png" alt="" aria-hidden="true" width="139" height="100" className={`${className} w-auto select-none`} draggable="false" />;
 }
 
 export default function Logo({ compact = false }) {
