@@ -1,0 +1,26 @@
+{
+  "name": "lesgo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lesgo: smart navigation and community traffic reporting",
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "test": "npm run test -w backend && npm run test -w frontend && npm run test:db",
+    "test:db": "vitest run --root supabase/tests"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "concurrently": "^10.0.7",
+    "vitest": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
