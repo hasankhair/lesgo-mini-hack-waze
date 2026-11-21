@@ -69,3 +69,12 @@ export function boundsToBbox(bounds, pad = 0.1) {
     .map((n) => n.toFixed(5))
     .join(',');
 }
+
+// Initial compass bearing from a to b, in degrees clockwise from north (0–360).
+export function bearingBetween(a, b) {
+  const [lat1, lng1] = toPair(a).map(rad);
+  const [lat2, lng2] = toPair(b).map(rad);
+  const y = Math.sin(lng2 - lng1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}

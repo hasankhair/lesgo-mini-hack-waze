@@ -41,6 +41,7 @@ const RouteLines = memo(function RouteLines({ routes, selectedId, onSelect, trav
 
 function MapView({
   onMapReady,
+  startView,
   userPosition,
   destination,
   origin,
@@ -63,8 +64,8 @@ function MapView({
   return (
     <MapContainer
       ref={onMapReady}
-      center={DEFAULT_CENTER}
-      zoom={DEFAULT_ZOOM}
+      center={startView?.center ?? DEFAULT_CENTER}
+      zoom={startView?.zoom ?? DEFAULT_ZOOM}
       zoomControl={false}
       worldCopyJump
       className="h-full w-full"

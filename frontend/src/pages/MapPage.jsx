@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Info, Layers } from 'lucide-react';
 import MapView from '../maps/MapView.jsx';
+import { webglSupported } from '../maps/map3d/helpers.js';
+import MapModeControl from '../components/MapModeControl.jsx';
 import { MIN_INCIDENT_ZOOM, MIN_REPORT_ZOOM } from '../maps/tileProviders.js';
 import SearchBar from '../components/SearchBar.jsx';
 import Logo from '../components/Logo.jsx';
@@ -25,7 +27,7 @@ import { useToast } from '../contexts/ToastContext.jsx';
 import { planRoute, reverseGeocode } from '../services/mapsService.js';
 import { createReport, voteOnReport, withdrawReport } from '../services/reportsService.js';
 import { addHistory, createSavedLocation, listHistory, listSavedLocations } from '../services/accountService.js';
-import { boundsToBbox } from '../utils/geo.js';
+import { bearingBetween, boundsToBbox } from '../utils/geo.js';
 import { formatCoords } from '../utils/format.js';
 
 const parseDestParam = (params) => {
@@ -33,6 +35,18 @@ const parseDestParam = (params) => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
   const name = (params.get('name') || 'Destination').slice(0, 120);
   return { id: `param:${lat},${lng}`, name, label: params.get('label')?.slice(0, 300) || '', lat, lng };
+};
+
+// The 3D map (MapLibre GL) is loaded only when someone switches to 3D.
+const MapView3D = lazy(() => import('../maps/MapView3D.jsx'));
+const MODE_KEY = 'lesgo.map3d';
+
+const readMode = () => {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'on' && webglSupported();
+  } catch {
+    return false;
+  }
 };
 
 export default function MapPage() {
@@ -44,6 +58,10 @@ export default function MapPage() {
   const [params, setParams] = useSearchParams();
 
   const [map, setMap] = useState(null);
+  const [is3D, setIs3D] = useState(readMode);
+  const [bearing, setBearing] = useState(0);
+  // Last camera position, so switching 2D <-> 3D keeps the same place.
+  const lastView = useRef(null);
   const [bbox, setBbox] = useState(null);
   const [incidentViewBbox, setIncidentViewBbox] = useState(null);
   const [trafficOn, setTrafficOn] = useState(() => {
@@ -105,6 +123,19 @@ export default function MapPage() {
   );
   const nav = useNavigation({ position: geo.position, reroute });
 
+  // Direction of travel for the 3D driving camera: the device heading when
+  // moving, otherwise the direction of the route segment the driver is on.
+  const navBearing = useMemo(() => {
+    const p = geo.position;
+    if (p && Number.isFinite(p.heading) && (p.speed ?? 0) > 1.5) return p.heading;
+    const line = nav.prepared?.line;
+    const i = nav.progress?.segmentIndex;
+    if (line && Number.isInteger(i) && line[i + 1]) return bearingBetween(line[i], line[i + 1]);
+    return null;
+  }, [geo.position, nav.prepared, nav.progress?.segmentIndex]);
+  const navBearingRef = useRef(navBearing);
+  navBearingRef.current = navBearing;
+
   // Official traffic incidents: the visible area while browsing (if the
   // traffic layer is on), or the whole route area while navigating so
   // incidents ahead can be announced.
@@ -131,6 +162,7 @@ export default function MapPage() {
   // ---- Map view tracking ----------------------------------------------------
   const onViewChange = useCallback((bounds, zoom) => {
     const c = bounds.getCenter();
+    lastView.current = { center: [c.lat, c.lng], zoom };
     setMapCenter({ lat: c.lat, lng: c.lng });
     setBbox(zoom >= MIN_REPORT_ZOOM ? boundsToBbox(bounds) : null);
     setIncidentViewBbox(zoom >= MIN_INCIDENT_ZOOM ? boundsToBbox(bounds, 0.05) : null);
@@ -152,8 +184,11 @@ export default function MapPage() {
       centerOnNextFix.current = false;
       map.flyTo(here, Math.max(map.getZoom(), 16), { duration: 0.8 });
     } else if (following) {
-      map.panTo(here, { animate: true, duration: 0.5 });
+      if (nav.active && map.follow) map.follow(here, navBearingRef.current);
+      else map.panTo(here, { animate: true, duration: 0.5 });
     }
+    // navBearingRef is read, not tracked: the camera moves on GPS updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, geo.position, following]);
 
   const errorRef = useRef(geo.status);
@@ -274,7 +309,10 @@ export default function MapPage() {
     geo.startTracking();
     setFollowing(true);
     setPanel(null);
-    if (geo.position && map) map.setView([geo.position.lat, geo.position.lng], 17, { animate: true });
+    if (geo.position && map) {
+      if (map.follow) map.follow([geo.position.lat, geo.position.lng], navBearingRef.current);
+      else map.setView([geo.position.lat, geo.position.lng], 17, { animate: true });
+    }
     if (user && destination) {
       addHistory({
         origin: planOrigin ? { label: 'Current location', ...planOrigin } : undefined,
@@ -293,6 +331,7 @@ export default function MapPage() {
     // Stop continuous tracking as soon as navigation ends.
     geo.stopTracking();
     setFollowing(false);
+    map?.resetCamera?.();
     if (arrived) clearDestination();
     else setPanel('route');
   };
@@ -370,28 +409,93 @@ export default function MapPage() {
     [geo.position && Math.round(geo.position.lat * 100), geo.position && Math.round(geo.position.lng * 100), mapCenter && Math.round(mapCenter.lat * 10), mapCenter && Math.round(mapCenter.lng * 10)],
   );
 
+  const setMode = useCallback((on) => {
+    setIs3D(on);
+    setBearing(0);
+    try {
+      localStorage.setItem(MODE_KEY, on ? 'on' : 'off');
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
+  const toggle3D = () => {
+    if (!is3D && !webglSupported()) {
+      notify('3D maps need WebGL, which this browser or device doesn’t support.', 'error');
+      return;
+    }
+    setMap(null);
+    setMode(!is3D);
+  };
+
+  const on3DFailed = useCallback(() => {
+    setMap(null);
+    setMode(false);
+    notify('The 3D map couldn’t load, so Lesgo switched back to 2D.', 'error', { duration: 6000 });
+  }, [setMode, notify]);
+
   return (
     <div className="relative h-dvh w-full overflow-hidden">
-      <MapView
+      {is3D ? (
+        <Suspense fallback={<MapLoading />}>
+          <MapView3D
+            key="map3d"
+            startView={lastView.current}
+            onBearingChange={setBearing}
+            onFatalError={on3DFailed}
         onMapReady={setMap}
-        userPosition={geo.position}
-        destination={destination}
-        origin={!nav.active && plan ? planOrigin : null}
-        routes={displayedRoutes}
-        selectedRouteId={displayedSelectedId}
-        onSelectRoute={nav.active ? undefined : setSelectedRouteId}
-        traveled={nav.active ? nav.traveled : null}
-        reports={reports}
-        incidents={trafficOn || nav.active ? incidentMarkers : []}
-        showTrafficFlow={trafficAvailable && trafficOn}
-        onVote={vote}
-        onWithdraw={withdraw}
-        onViewChange={onViewChange}
-        onUserPan={() => {
-          setFollowing(false);
-          if (initialView.current === 'pending') initialView.current = 'skip';
-        }}
-        onContextMenu={nav.active ? undefined : onContextMenu}
+            userPosition={geo.position}
+            destination={destination}
+            origin={!nav.active && plan ? planOrigin : null}
+            routes={displayedRoutes}
+            selectedRouteId={displayedSelectedId}
+            onSelectRoute={nav.active ? undefined : setSelectedRouteId}
+            traveled={nav.active ? nav.traveled : null}
+            reports={reports}
+            incidents={trafficOn || nav.active ? incidentMarkers : []}
+            showTrafficFlow={trafficAvailable && trafficOn}
+            onVote={vote}
+            onWithdraw={withdraw}
+            onViewChange={onViewChange}
+            onUserPan={() => {
+              setFollowing(false);
+              if (initialView.current === 'pending') initialView.current = 'skip';
+            }}
+            onContextMenu={nav.active ? undefined : onContextMenu}
+          />
+        </Suspense>
+      ) : (
+        <MapView
+          key="map2d"
+          startView={lastView.current}
+        onMapReady={setMap}
+          userPosition={geo.position}
+          destination={destination}
+          origin={!nav.active && plan ? planOrigin : null}
+          routes={displayedRoutes}
+          selectedRouteId={displayedSelectedId}
+          onSelectRoute={nav.active ? undefined : setSelectedRouteId}
+          traveled={nav.active ? nav.traveled : null}
+          reports={reports}
+          incidents={trafficOn || nav.active ? incidentMarkers : []}
+          showTrafficFlow={trafficAvailable && trafficOn}
+          onVote={vote}
+          onWithdraw={withdraw}
+          onViewChange={onViewChange}
+          onUserPan={() => {
+            setFollowing(false);
+            if (initialView.current === 'pending') initialView.current = 'skip';
+          }}
+          onContextMenu={nav.active ? undefined : onContextMenu}
+        />
+      )}
+
+      <MapModeControl
+        is3D={is3D}
+        onToggle={toggle3D}
+        bearing={bearing}
+        onResetNorth={() => map?.resetNorth?.()}
+        className={nav.active ? 'bottom-24 sm:bottom-28' : 'bottom-[5.75rem] sm:bottom-28'}
       />
 
       {nav.active ? (
@@ -403,7 +507,9 @@ export default function MapPage() {
           following={following}
           onRecenter={() => {
             setFollowing(true);
-            if (geo.position) map?.flyTo([geo.position.lat, geo.position.lng], 17, { duration: 0.6 });
+            if (!geo.position || !map) return;
+            if (map.follow) map.follow([geo.position.lat, geo.position.lng], navBearingRef.current);
+            else map.flyTo([geo.position.lat, geo.position.lng], 17, { duration: 0.6 });
           }}
           onEnd={endNavigation}
           onReport={() => setReportOpen(true)}
@@ -426,7 +532,8 @@ export default function MapPage() {
                 quickPicks={quickPicks}
                 autocomplete={capabilities.geocoding.supportsAutocomplete}
               />
-              <div className="mt-2 flex flex-wrap gap-2">
+              {/* With the route panel open on larger screens, keep the chips to the right of it. */}
+              <div className={`mt-2 flex flex-wrap gap-2 ${panel === 'route' && destination ? 'sm:justify-end' : ''}`}>
                 <span className="map-chip" title="Incident pins are reported by drivers and are not verified.">
                   <span
                     className={`status-dot ${realtimeStatus === 'live' ? 'bg-go-500 shadow-[0_0_0_3px] shadow-go-500/20' : 'bg-slate-400'}`}
@@ -504,6 +611,16 @@ export default function MapPage() {
         <ReportDialog user={user} userPosition={geo.position} mapCenter={mapCenter} onSubmit={submitReport} onClose={() => setReportOpen(false)} />
       )}
       {saveOpen && destination && <SavePlaceDialog place={destination} onSave={saveDestination} onClose={() => setSaveOpen(false)} />}
+    </div>
+  );
+}
+
+function MapLoading() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[#eef0f3] dark:bg-navy-900" role="status">
+      <span className="panel flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" aria-hidden /> Loading 3D map…
+      </span>
     </div>
   );
 }
